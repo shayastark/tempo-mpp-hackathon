@@ -1,60 +1,56 @@
 "use client";
 
 import { useState } from "react";
-import { useAccount, useWalletClient, usePublicClient } from "wagmi";
+import {
+  useAccount,
+  useDeployContract,
+  useWaitForTransactionReceipt,
+} from "wagmi";
 import artifact from "../../../contracts/artifacts/TempoEscrow.json";
 
 export default function DeployPage() {
   const { address, isConnected, chain } = useAccount();
-  const { data: walletClient } = useWalletClient();
-  const publicClient = usePublicClient();
-
   const [feeCollector, setFeeCollector] = useState("");
-  const [status, setStatus] = useState<string | null>(null);
-  const [txHash, setTxHash] = useState<string | null>(null);
-  const [contractAddress, setContractAddress] = useState<string | null>(null);
-  const [deploying, setDeploying] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const deploy = async () => {
-    if (!walletClient || !publicClient || !address) return;
+  const {
+    deployContract,
+    data: txHash,
+    isPending: deploying,
+    error: deployError,
+    reset,
+  } = useDeployContract();
 
-    const collector = feeCollector.trim() || address;
+  const {
+    data: receipt,
+    isLoading: confirming,
+    error: receiptError,
+  } = useWaitForTransactionReceipt({ hash: txHash });
 
-    setDeploying(true);
-    setError(null);
-    setStatus("Sending deployment transaction...");
-    setTxHash(null);
-    setContractAddress(null);
+  const contractAddress = receipt?.contractAddress;
+  const error = deployError || receiptError;
 
-    try {
-      const hash = await walletClient.deployContract({
-        abi: artifact.abi,
-        bytecode: artifact.bytecode as `0x${string}`,
-        args: [collector],
-      });
+  const handleDeploy = () => {
+    if (!address) return;
+    reset();
 
-      setTxHash(hash);
-      setStatus("Transaction submitted. Waiting for confirmation...");
+    const collector = (feeCollector.trim() || address) as `0x${string}`;
 
-      const receipt = await publicClient.waitForTransactionReceipt({ hash });
-
-      if (receipt.contractAddress) {
-        setContractAddress(receipt.contractAddress);
-        setStatus("Deployed successfully!");
-      } else {
-        setError("Deployment transaction succeeded but no contract address returned.");
-        setStatus(null);
-      }
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : String(err));
-      setStatus(null);
-    } finally {
-      setDeploying(false);
-    }
+    deployContract({
+      abi: artifact.abi,
+      bytecode: artifact.bytecode as `0x${string}`,
+      args: [collector],
+    });
   };
 
   const explorerUrl = chain?.blockExplorers?.default?.url;
+
+  const statusText = deploying
+    ? "Sending deployment transaction..."
+    : confirming
+      ? "Transaction submitted. Waiting for confirmation..."
+      : contractAddress
+        ? "Deployed successfully!"
+        : null;
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-12">
@@ -106,18 +102,22 @@ export default function DeployPage() {
           </div>
 
           <button
-            onClick={deploy}
-            disabled={deploying}
+            onClick={handleDeploy}
+            disabled={deploying || confirming}
             className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-800 disabled:text-zinc-500 text-white px-6 py-3 rounded-lg font-medium transition-colors"
           >
-            {deploying ? "Deploying..." : "Deploy Contract"}
+            {deploying
+              ? "Sending Transaction..."
+              : confirming
+                ? "Confirming..."
+                : "Deploy Contract"}
           </button>
         </div>
       )}
 
-      {status && (
+      {statusText && (
         <div className="mt-6 bg-blue-900/20 border border-blue-700/50 rounded-xl p-6">
-          <p className="text-blue-300 text-sm">{status}</p>
+          <p className="text-blue-300 text-sm">{statusText}</p>
         </div>
       )}
 
@@ -164,7 +164,9 @@ export default function DeployPage() {
       {error && (
         <div className="mt-4 bg-red-900/20 border border-red-700/50 rounded-xl p-6">
           <h3 className="text-sm font-medium text-red-400 mb-2">Error</h3>
-          <pre className="text-sm text-zinc-300 whitespace-pre-wrap font-mono">{error}</pre>
+          <pre className="text-sm text-zinc-300 whitespace-pre-wrap font-mono">
+            {error instanceof Error ? error.message : String(error)}
+          </pre>
         </div>
       )}
     </div>
