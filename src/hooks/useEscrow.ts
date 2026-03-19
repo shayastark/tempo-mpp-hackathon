@@ -80,13 +80,17 @@ export function useAllEscrowsData(count: number) {
     const socialResult = data?.[i * 2 + 1];
     if (mainResult?.status !== "success" || !mainResult.result) return null;
 
-    const social = socialResult?.status === "success" && socialResult.result
-      ? (socialResult.result as { socialHandle: string; socialPlatform: string })
+    // getEscrowSocial returns [socialHandle, socialPlatform] as an array
+    const socialArr = socialResult?.status === "success" && socialResult.result
+      ? (socialResult.result as readonly [string, string])
+      : null;
+    const social = socialArr
+      ? { socialHandle: socialArr[0] ?? "", socialPlatform: socialArr[1] ?? "" }
       : { socialHandle: "", socialPlatform: "" };
 
     return {
       id: BigInt(i),
-      ...parseEscrowInfo(mainResult.result as RawEscrowInfo),
+      ...parseEscrowResult(mainResult.result as RawEscrowResult),
       socialHandle: social.socialHandle ?? "",
       socialPlatform: social.socialPlatform ?? "",
     };
@@ -95,38 +99,29 @@ export function useAllEscrowsData(count: number) {
   return { data: parsed, isLoading, isError };
 }
 
-type RawEscrowInfo = {
-  id: bigint;
-  depositor: string;
-  recipient: string;
-  token: string;
-  amount: bigint;
-  createdAt: bigint;
-  deadline: bigint;
-  releaseTime: bigint;
-  status: number;
-  condition: number;
-  memo: string;
-  description: string;
-  approvalCount: bigint;
-  requiredApprovals: bigint;
-};
+// getEscrow returns 13 individual values (not a tuple):
+// [depositor, recipient, token, amount, createdAt, deadline, releaseTime,
+//  status, condition, memo, description, approvalCount, requiredApprovals]
+type RawEscrowResult = readonly [
+  string, string, string, bigint, bigint, bigint, bigint,
+  number, number, string, string, bigint, bigint,
+];
 
-function parseEscrowInfo(info: RawEscrowInfo): EscrowData {
+function parseEscrowResult(r: RawEscrowResult): EscrowData {
   return {
-    depositor: info.depositor,
-    recipient: info.recipient,
-    token: info.token,
-    amount: info.amount,
-    createdAt: info.createdAt,
-    deadline: info.deadline,
-    releaseTime: info.releaseTime,
-    status: STATUS_MAP[Number(info.status)] ?? "Active",
-    condition: CONDITION_MAP[Number(info.condition)] ?? "AgentApproval",
-    memo: info.memo,
-    description: info.description,
-    approvalCount: info.approvalCount,
-    requiredApprovals: info.requiredApprovals,
+    depositor: r[0],
+    recipient: r[1],
+    token: r[2],
+    amount: r[3],
+    createdAt: r[4],
+    deadline: r[5],
+    releaseTime: r[6],
+    status: STATUS_MAP[Number(r[7])] ?? "Active",
+    condition: CONDITION_MAP[Number(r[8])] ?? "AgentApproval",
+    memo: r[9],
+    description: r[10],
+    approvalCount: r[11],
+    requiredApprovals: r[12],
     socialHandle: "",
     socialPlatform: "",
   };
@@ -141,7 +136,7 @@ export function useEscrowData(escrowId: bigint) {
   });
 
   const parsed: EscrowData | undefined = data
-    ? parseEscrowInfo(data as RawEscrowInfo)
+    ? parseEscrowResult(data as unknown as RawEscrowResult)
     : undefined;
 
   return { data: parsed, ...rest };
@@ -218,20 +213,18 @@ export function useCreateEscrow() {
         abi: ESCROW_ABI,
         functionName: "createEscrow",
         args: [
-          {
-            recipient: params.recipient,
-            token: params.token,
-            amount: params.amount,
-            deadline: params.deadline,
-            releaseTime: params.releaseTime,
-            condition: params.condition,
-            agents: params.agents,
-            requiredApprovals: params.requiredApprovals,
-            memo: params.memo,
-            description: params.description,
-            socialHandle: params.socialHandle,
-            socialPlatform: params.socialPlatform,
-          },
+          params.recipient,
+          params.token,
+          params.amount,
+          params.deadline,
+          params.releaseTime,
+          params.condition,
+          params.agents,
+          params.requiredApprovals,
+          params.memo,
+          params.description,
+          params.socialHandle,
+          params.socialPlatform,
         ],
         chainId: tempoMainnet.id,
       });
