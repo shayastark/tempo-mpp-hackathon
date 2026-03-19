@@ -17,7 +17,7 @@ const RELEASE_CONDITIONS = [
 export default function CreateEscrowPage() {
   const { address, isConnected } = useAccount();
   const { create, isPending: isCreating, isConfirming, isSuccess, error } = useCreateEscrow();
-  const { approveToken, isPending: isApproving, isSuccess: isApproved } = useApproveToken();
+  const { approveToken, isPending: isApproving, isConfirming: isApproveConfirming, isSuccess: isApproved, error: approveError } = useApproveToken();
 
   const [isBounty, setIsBounty] = useState(false);
   const [step, setStep] = useState<"form" | "approve" | "create">("form");
@@ -361,6 +361,16 @@ export default function CreateEscrowPage() {
           </button>
         )}
 
+        {step === "approve" && !isApproved && !approveError && (
+          <button
+            type="button"
+            disabled
+            className="w-full bg-zinc-700 text-white py-3 rounded-lg font-medium text-lg"
+          >
+            {isApproving ? "Approve in wallet..." : isApproveConfirming ? "Waiting for confirmation..." : "Approving..."}
+          </button>
+        )}
+
         {step === "approve" && isApproved && (
           <button
             type="button"
@@ -370,6 +380,12 @@ export default function CreateEscrowPage() {
           >
             {isCreating ? "Creating..." : isConfirming ? "Confirming..." : "Confirm & Create Escrow"}
           </button>
+        )}
+
+        {approveError && (
+          <div className="bg-red-900/30 border border-red-700 rounded-lg p-4 text-red-300 text-sm">
+            <strong>Token approval failed:</strong> {approveError.message}
+          </div>
         )}
 
         {error && (

@@ -2,7 +2,13 @@
 
 import { useReadContract, useReadContracts, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import type { Abi } from "viem";
-import { ESCROW_ABI, ESCROW_CONTRACT_ADDRESS, TIP20_ABI } from "@/config/contracts";
+import { ESCROW_ABI, ESCROW_CONTRACT_ADDRESS, TIP20_ABI, DEFAULT_TOKEN } from "@/config/contracts";
+import { tempoMainnet } from "@/config/chains";
+
+// Tempo has no native gas token — every tx must declare which TIP-20 token pays
+// for gas. Without this field the wallet cannot simulate the tx and shows
+// "Something is wrong".
+const FEE_TOKEN = DEFAULT_TOKEN as `0x${string}`;
 
 export type EscrowStatus = "Active" | "Released" | "Refunded" | "Disputed" | "Expired";
 export type ReleaseCondition = "AgentApproval" | "TimeLock" | "MultiSig" | "SocialVerified";
@@ -87,6 +93,7 @@ export function useAllEscrowsData(count: number) {
 }
 
 type RawEscrowInfo = {
+  id: bigint;
   depositor: string;
   recipient: string;
   token: string;
@@ -100,8 +107,6 @@ type RawEscrowInfo = {
   description: string;
   approvalCount: bigint;
   requiredApprovals: bigint;
-  socialHandle: string;
-  socialPlatform: string;
 };
 
 function parseEscrowInfo(info: RawEscrowInfo): EscrowData {
@@ -119,8 +124,8 @@ function parseEscrowInfo(info: RawEscrowInfo): EscrowData {
     description: info.description,
     approvalCount: info.approvalCount,
     requiredApprovals: info.requiredApprovals,
-    socialHandle: info.socialHandle ?? "",
-    socialPlatform: info.socialPlatform ?? "",
+    socialHandle: "",
+    socialPlatform: "",
   };
 }
 
@@ -206,6 +211,9 @@ export function useCreateEscrow() {
           socialPlatform: params.socialPlatform,
         },
       ],
+      chainId: tempoMainnet.id,
+      // @ts-expect-error — Tempo-specific transaction field
+      feeToken: FEE_TOKEN,
     });
   };
 
@@ -222,6 +230,9 @@ export function useApproveRelease() {
       abi: ESCROW_ABI,
       functionName: "approveRelease",
       args: [escrowId],
+      chainId: tempoMainnet.id,
+      // @ts-expect-error — Tempo-specific transaction field
+      feeToken: FEE_TOKEN,
     });
   };
 
@@ -238,6 +249,9 @@ export function useReleaseTimeLock() {
       abi: ESCROW_ABI,
       functionName: "releaseTimeLock",
       args: [escrowId],
+      chainId: tempoMainnet.id,
+      // @ts-expect-error — Tempo-specific transaction field
+      feeToken: FEE_TOKEN,
     });
   };
 
@@ -254,6 +268,9 @@ export function useReleaseSocialVerified() {
       abi: ESCROW_ABI,
       functionName: "releaseSocialVerified",
       args: [escrowId, verified],
+      chainId: tempoMainnet.id,
+      // @ts-expect-error — Tempo-specific transaction field
+      feeToken: FEE_TOKEN,
     });
   };
 
@@ -270,6 +287,9 @@ export function useRefundExpired() {
       abi: ESCROW_ABI,
       functionName: "refundExpired",
       args: [escrowId],
+      chainId: tempoMainnet.id,
+      // @ts-expect-error — Tempo-specific transaction field
+      feeToken: FEE_TOKEN,
     });
   };
 
@@ -286,6 +306,9 @@ export function useDispute() {
       abi: ESCROW_ABI,
       functionName: "dispute",
       args: [escrowId],
+      chainId: tempoMainnet.id,
+      // @ts-expect-error — Tempo-specific transaction field
+      feeToken: FEE_TOKEN,
     });
   };
 
@@ -302,6 +325,9 @@ export function useClaimBounty() {
       abi: ESCROW_ABI,
       functionName: "claimBounty",
       args: [escrowId, claimant],
+      chainId: tempoMainnet.id,
+      // @ts-expect-error — Tempo-specific transaction field
+      feeToken: FEE_TOKEN,
     });
   };
 
@@ -324,6 +350,9 @@ export function useApproveToken() {
       abi: TIP20_ABI,
       functionName: "approve",
       args: [ESCROW_CONTRACT_ADDRESS, amount],
+      chainId: tempoMainnet.id,
+      // @ts-expect-error — Tempo-specific transaction field
+      feeToken: FEE_TOKEN,
     });
   };
 
