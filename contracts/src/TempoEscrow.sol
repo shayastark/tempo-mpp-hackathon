@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import "../interfaces/ITIP20.sol";
+import {ITIP20} from "../interfaces/ITIP20.sol";
 
 /// @title TempoEscrow - Hybrid Non-Custodial Escrow with Agent-Triggered Release
 /// @notice A social-layer agnostic escrow system built on Tempo for TIP-20 stablecoins.
@@ -187,7 +187,7 @@ contract TempoEscrow {
         }
 
         // Transfer tokens from depositor to this contract
-        ITIP20(token).transferFrom(msg.sender, address(this), amount);
+        require(ITIP20(token).transferFrom(msg.sender, address(this), amount), "Transfer failed");
 
         escrowId = nextEscrowId++;
 
@@ -300,9 +300,9 @@ contract TempoEscrow {
         uint256 payout = e.amount - fee;
 
         if (fee > 0) {
-            ITIP20(e.token).transfer(feeCollector, fee);
+            require(ITIP20(e.token).transfer(feeCollector, fee), "Fee transfer failed");
         }
-        ITIP20(e.token).transferWithMemo(claimant, payout, e.memo);
+        require(ITIP20(e.token).transferWithMemo(claimant, payout, e.memo), "Payout transfer failed");
 
         emit BountyClaimed(escrowId, claimant, payout, msg.sender);
         emit EscrowReleased(escrowId, claimant, payout, msg.sender);
@@ -319,7 +319,7 @@ contract TempoEscrow {
         require(block.timestamp >= e.deadline, "Deadline not reached");
 
         e.status = EscrowStatus.Expired;
-        ITIP20(e.token).transfer(e.depositor, e.amount);
+        require(ITIP20(e.token).transfer(e.depositor, e.amount), "Refund transfer failed");
 
         emit EscrowRefunded(escrowId, e.depositor, e.amount);
     }
@@ -356,7 +356,7 @@ contract TempoEscrow {
             _release(escrowId);
         } else {
             e.status = EscrowStatus.Refunded;
-            ITIP20(e.token).transfer(e.depositor, e.amount);
+            require(ITIP20(e.token).transfer(e.depositor, e.amount), "Refund transfer failed");
             emit EscrowRefunded(escrowId, e.depositor, e.amount);
         }
     }
@@ -417,9 +417,9 @@ contract TempoEscrow {
         uint256 payout = e.amount - fee;
 
         if (fee > 0) {
-            ITIP20(e.token).transfer(feeCollector, fee);
+            require(ITIP20(e.token).transfer(feeCollector, fee), "Fee transfer failed");
         }
-        ITIP20(e.token).transferWithMemo(e.recipient, payout, e.memo);
+        require(ITIP20(e.token).transferWithMemo(e.recipient, payout, e.memo), "Payout transfer failed");
 
         emit EscrowReleased(escrowId, e.recipient, payout, msg.sender);
     }
