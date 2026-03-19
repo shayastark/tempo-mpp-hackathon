@@ -3,10 +3,10 @@
 import { http, createConfig } from "wagmi";
 import { injected } from "wagmi/connectors";
 import { webAuthn, dangerous_secp256k1, KeyManager } from "wagmi/tempo";
-import { tempoTestnet } from "./chains";
+import { tempoTestnet, tempoMainnet } from "./chains";
 
 export const wagmiConfig = createConfig({
-  chains: [tempoTestnet],
+  chains: [tempoMainnet, tempoTestnet],
   connectors: [
     // Tempo passkey wallet (WebAuthn P256)
     webAuthn({
@@ -18,6 +18,7 @@ export const wagmiConfig = createConfig({
     injected(),
   ],
   transports: {
+    [tempoMainnet.id]: http(),
     [tempoTestnet.id]: http(),
   },
 });

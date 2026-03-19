@@ -3,8 +3,11 @@ export const ESCROW_CONTRACT_ADDRESS = "0x00000000000000000000000000000000000000
 
 // Known TIP-20 token addresses on Tempo
 export const KNOWN_TOKENS = {
-  pathUSD: "0x0000000000000000000000000000000000000000", // Update with actual pathUSD address
+  USDC: "0x20c000000000000000000000b9537d11c60e8b50",
 } as const;
+
+// Default token used for escrows
+export const DEFAULT_TOKEN = KNOWN_TOKENS.USDC;
 
 // ABI for the TempoEscrow contract
 export const ESCROW_ABI = [
