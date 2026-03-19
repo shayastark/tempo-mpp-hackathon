@@ -1,34 +1,34 @@
 import { defineChain } from "viem";
 
 export const tempoTestnet = defineChain({
-  id: 1996, // Tempo testnet chain ID
+  id: 42431,
   name: "Tempo Testnet",
   nativeCurrency: {
-    name: "USDC",
-    symbol: "USDC",
-    decimals: 6,
+    name: "USD",
+    symbol: "USD",
+    decimals: 18,
   },
   rpcUrls: {
     default: {
-      http: ["https://rpc.testnet.tempo.xyz"],
+      http: ["https://rpc.moderato.tempo.xyz"],
     },
   },
   blockExplorers: {
     default: {
       name: "Tempo Explorer",
-      url: "https://explorer.testnet.tempo.xyz",
+      url: "https://explore.tempo.xyz",
     },
   },
   testnet: true,
 });
 
 export const tempoMainnet = defineChain({
-  id: 1998, // Tempo mainnet chain ID
+  id: 4217,
   name: "Tempo",
   nativeCurrency: {
-    name: "USDC",
-    symbol: "USDC",
-    decimals: 6,
+    name: "USD",
+    symbol: "USD",
+    decimals: 18,
   },
   rpcUrls: {
     default: {
@@ -38,7 +38,7 @@ export const tempoMainnet = defineChain({
   blockExplorers: {
     default: {
       name: "Tempo Explorer",
-      url: "https://explorer.tempo.xyz",
+      url: "https://explore.mainnet.tempo.xyz",
     },
   },
 });
