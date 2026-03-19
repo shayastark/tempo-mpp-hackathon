@@ -5,9 +5,9 @@ import { createWalletClient, createPublicClient, http, defineChain } from "viem"
 import { privateKeyToAccount } from "viem/accounts";
 
 const tempoMainnet = defineChain({
-  id: 1998,
+  id: 4217,
   name: "Tempo",
-  nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 6 },
+  nativeCurrency: { name: "USD", symbol: "USD", decimals: 6 },
   rpcUrls: { default: { http: ["https://rpc.tempo.xyz"] } },
 });
 
@@ -67,6 +67,8 @@ async function main() {
   // 2. Deploy
   const account = privateKeyToAccount(privateKey as `0x${string}`);
   console.log("Deployer:", account.address);
+
+  console.log("Network:", tempoMainnet.name, `(chain ID: ${tempoMainnet.id})`);
 
   const publicClient = createPublicClient({
     chain: tempoMainnet,

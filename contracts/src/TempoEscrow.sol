@@ -302,7 +302,7 @@ contract TempoEscrow {
         if (fee > 0) {
             ITIP20(e.token).transfer(feeCollector, fee);
         }
-        ITIP20(e.token).transfer(claimant, payout);
+        ITIP20(e.token).transferWithMemo(claimant, payout, e.memo);
 
         emit BountyClaimed(escrowId, claimant, payout, msg.sender);
         emit EscrowReleased(escrowId, claimant, payout, msg.sender);
@@ -419,7 +419,7 @@ contract TempoEscrow {
         if (fee > 0) {
             ITIP20(e.token).transfer(feeCollector, fee);
         }
-        ITIP20(e.token).transfer(e.recipient, payout);
+        ITIP20(e.token).transferWithMemo(e.recipient, payout, e.memo);
 
         emit EscrowReleased(escrowId, e.recipient, payout, msg.sender);
     }

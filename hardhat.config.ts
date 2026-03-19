@@ -9,16 +9,10 @@ const config: HardhatUserConfig = {
     sources: "./contracts",
   },
   networks: {
-    tempoTestnet: {
-      type: "http",
-      url: "https://rpc.testnet.tempo.xyz",
-      chainId: 1996,
-      accounts: DEPLOYER_PRIVATE_KEY ? [DEPLOYER_PRIVATE_KEY] : [],
-    },
     tempoMainnet: {
       type: "http",
       url: "https://rpc.tempo.xyz",
-      chainId: 1998,
+      chainId: 4217,
       accounts: DEPLOYER_PRIVATE_KEY ? [DEPLOYER_PRIVATE_KEY] : [],
     },
   },
