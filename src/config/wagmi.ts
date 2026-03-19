@@ -5,10 +5,10 @@ import { injected } from "wagmi/connectors";
 import { webAuthn, dangerous_secp256k1, KeyManager } from "wagmi/tempo";
 import { tempoMainnet } from "./chains";
 
-// Use a private RPC if provided (Alchemy, QuickNode, dRPC, etc.) to avoid
-// 429 rate-limit errors from the public endpoint under load.
-const rpcUrl =
-  process.env.NEXT_PUBLIC_TEMPO_RPC_URL ?? "https://gracious-knuth:goofy-chandrasekhar@rpc.tempo.xyz";
+// All RPC traffic goes through the local /api/rpc proxy which forwards to the
+// upstream with credentials server-side. Browsers block fetch requests that
+// contain user:password@ in the URL, so we never put the credentialed URL here.
+const rpcUrl = "/api/rpc";
 
 export const wagmiConfig = createConfig({
   chains: [tempoMainnet],
