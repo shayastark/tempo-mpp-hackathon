@@ -4,8 +4,9 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAccount } from "wagmi";
 import { parseUnits, pad } from "viem";
-import { useCreateEscrow, useApproveToken, ZERO_ADDRESS } from "@/hooks/useEscrow";
+import { useCreateEscrow, useApproveToken, useTokenBalance, ZERO_ADDRESS } from "@/hooks/useEscrow";
 import { DEFAULT_TOKEN } from "@/config/contracts";
+import { formatUnits } from "viem";
 
 const RELEASE_CONDITIONS = [
   { value: 0, label: "Agent Approval", description: "A single agent approves the release" },
@@ -18,6 +19,11 @@ export default function CreateEscrowPage() {
   const { address, isConnected } = useAccount();
   const { create, isPending: isCreating, isConfirming, isSuccess, error } = useCreateEscrow();
   const { approveToken, isPending: isApproving, isConfirming: isApproveConfirming, isSuccess: isApproved, error: approveError } = useApproveToken();
+  const { data: rawBalance } = useTokenBalance(
+    DEFAULT_TOKEN as `0x${string}`,
+    address as `0x${string}` | undefined,
+  );
+  const balance = rawBalance != null ? formatUnits(rawBalance as bigint, 6) : null;
 
   const [isBounty, setIsBounty] = useState(false);
   const [step, setStep] = useState<"form" | "approve" | "create">("form");
@@ -189,6 +195,12 @@ export default function CreateEscrowPage() {
               {form.token.slice(0, 6)}...{form.token.slice(-4)}
             </span>
           </div>
+          {balance != null && (
+            <p className="text-xs text-zinc-400 mt-1">
+              Balance: <span className="text-white font-medium">{balance} USDC</span>
+              {" "}<span className="text-zinc-500">(also used for gas fees)</span>
+            </p>
+          )}
         </div>
 
         {/* Amount */}
