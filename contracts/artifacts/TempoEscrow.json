@@ -477,69 +477,81 @@
       "name": "getEscrow",
       "outputs": [
         {
-          "internalType": "address",
-          "name": "depositor",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "recipient",
-          "type": "address"
-        },
-        {
-          "internalType": "address",
-          "name": "token",
-          "type": "address"
-        },
-        {
-          "internalType": "uint256",
-          "name": "amount",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "createdAt",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "deadline",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "releaseTime",
-          "type": "uint256"
-        },
-        {
-          "internalType": "enum TempoEscrow.EscrowStatus",
-          "name": "status",
-          "type": "uint8"
-        },
-        {
-          "internalType": "enum TempoEscrow.ReleaseCondition",
-          "name": "condition",
-          "type": "uint8"
-        },
-        {
-          "internalType": "bytes32",
-          "name": "memo",
-          "type": "bytes32"
-        },
-        {
-          "internalType": "string",
-          "name": "description",
-          "type": "string"
-        },
-        {
-          "internalType": "uint256",
-          "name": "approvalCount",
-          "type": "uint256"
-        },
-        {
-          "internalType": "uint256",
-          "name": "requiredApprovals",
-          "type": "uint256"
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "id",
+              "type": "uint256"
+            },
+            {
+              "internalType": "address",
+              "name": "depositor",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "recipient",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "token",
+              "type": "address"
+            },
+            {
+              "internalType": "uint256",
+              "name": "amount",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "createdAt",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "deadline",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "releaseTime",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint8",
+              "name": "status",
+              "type": "uint8"
+            },
+            {
+              "internalType": "uint8",
+              "name": "condition",
+              "type": "uint8"
+            },
+            {
+              "internalType": "bytes32",
+              "name": "memo",
+              "type": "bytes32"
+            },
+            {
+              "internalType": "string",
+              "name": "description",
+              "type": "string"
+            },
+            {
+              "internalType": "uint256",
+              "name": "approvalCount",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "requiredApprovals",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct TempoEscrow.EscrowInfo",
+          "name": "",
+          "type": "tuple"
         }
       ],
       "stateMutability": "view",

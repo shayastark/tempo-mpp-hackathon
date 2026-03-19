@@ -361,30 +361,45 @@ contract TempoEscrow {
         }
     }
 
+    // ─── Structs (View) ────────────────────────────────────────────────
+
+    struct EscrowInfo {
+        uint256 id;
+        address depositor;
+        address recipient;
+        address token;
+        uint256 amount;
+        uint256 createdAt;
+        uint256 deadline;
+        uint256 releaseTime;
+        EscrowStatus status;
+        ReleaseCondition condition;
+        bytes32 memo;
+        string description;
+        uint256 approvalCount;
+        uint256 requiredApprovals;
+    }
+
     // ─── View Functions ──────────────────────────────────────────────────
 
-    function getEscrow(uint256 escrowId) external view returns (
-        address depositor,
-        address recipient,
-        address token,
-        uint256 amount,
-        uint256 createdAt,
-        uint256 deadline,
-        uint256 releaseTime,
-        EscrowStatus status,
-        ReleaseCondition condition,
-        bytes32 memo,
-        string memory description,
-        uint256 approvalCount,
-        uint256 requiredApprovals
-    ) {
+    function getEscrow(uint256 escrowId) external view returns (EscrowInfo memory) {
         Escrow storage e = escrows[escrowId];
-        return (
-            e.depositor, e.recipient, e.token, e.amount,
-            e.createdAt, e.deadline, e.releaseTime,
-            e.status, e.condition, e.memo, e.description,
-            e.approvalCount, e.requiredApprovals
-        );
+        return EscrowInfo({
+            id: e.id,
+            depositor: e.depositor,
+            recipient: e.recipient,
+            token: e.token,
+            amount: e.amount,
+            createdAt: e.createdAt,
+            deadline: e.deadline,
+            releaseTime: e.releaseTime,
+            status: e.status,
+            condition: e.condition,
+            memo: e.memo,
+            description: e.description,
+            approvalCount: e.approvalCount,
+            requiredApprovals: e.requiredApprovals
+        });
     }
 
     function getEscrowAgents(uint256 escrowId) external view returns (address[] memory) {
