@@ -6,15 +6,28 @@ import {
   useDeployContract,
   useSwitchChain,
   useWaitForTransactionReceipt,
+  useConnections,
 } from "wagmi";
 import artifact from "../../../contracts/artifacts/TempoEscrow.json";
 import { tempoMainnet } from "@/config/chains";
 
+const USDC_FEE_TOKEN = "0x20c000000000000000000000b9537d11c60e8b50" as const;
+
+// Browser wallet (injected) sends standard EVM txs → fee defaults to pathUSD.
+// Passkey / EOA (secp256k1) connectors send native Tempo Transactions → respects feeToken.
+const INJECTED_CONNECTOR_IDS = ["injected", "metaMask", "coinbaseWallet"];
+
 export default function DeployPage() {
   const { address, isConnected, chain } = useAccount();
+  const connections = useConnections();
   const { switchChain } = useSwitchChain();
   const [feeCollector, setFeeCollector] = useState("");
   const isWrongChain = chain?.id !== tempoMainnet.id;
+
+  const activeConnectorId = connections[0]?.connector?.id ?? "";
+  const isInjectedWallet = INJECTED_CONNECTOR_IDS.some((id) =>
+    activeConnectorId.toLowerCase().includes(id.toLowerCase())
+  );
 
   const {
     deployContract,
@@ -44,6 +57,10 @@ export default function DeployPage() {
       bytecode: artifact.bytecode as `0x${string}`,
       args: [collector],
       chainId: tempoMainnet.id,
+      // Explicitly set USDC as the fee token for Tempo Transactions.
+      // Only respected by Passkey / EOA (secp256k1) connectors.
+      // @ts-expect-error — Tempo-specific transaction field
+      feeToken: USDC_FEE_TOKEN,
     });
   };
 
@@ -85,6 +102,32 @@ export default function DeployPage() {
               >
                 Switch to Tempo
               </button>
+            </div>
+          )}
+
+          {isInjectedWallet && !isWrongChain && (
+            <div className="bg-amber-900/20 border border-amber-700/50 rounded-lg p-4">
+              <p className="text-amber-200 text-sm font-medium mb-1">
+                ⚠ Browser Wallet detected — fees will require pathUSD
+              </p>
+              <p className="text-amber-300/80 text-xs">
+                Browser wallets (MetaMask, etc.) send standard EVM transactions.
+                On Tempo, these default to <strong>pathUSD</strong> for gas fees, not USDC.
+              </p>
+              <p className="text-amber-300/80 text-xs mt-1">
+                To pay fees in USDC, disconnect and reconnect using{" "}
+                <strong>Passkey</strong> or <strong>EOA (Secp256k1)</strong> —
+                those send native Tempo Transactions which use USDC automatically.
+              </p>
+            </div>
+          )}
+
+          {!isInjectedWallet && !isWrongChain && (
+            <div className="bg-green-900/20 border border-green-700/50 rounded-lg p-3">
+              <p className="text-green-300 text-xs">
+                ✓ Using Tempo Transaction connector — gas fees will be paid in USDC
+                (<span className="font-mono">0x20c0...8b50</span>)
+              </p>
             </div>
           )}
 
