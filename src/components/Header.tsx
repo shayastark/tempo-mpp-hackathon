@@ -14,10 +14,16 @@ export function Header() {
             </Link>
             <nav className="hidden md:flex items-center gap-6">
               <Link
+                href="/bounties"
+                className="text-sm text-zinc-400 hover:text-white transition-colors"
+              >
+                Bounties
+              </Link>
+              <Link
                 href="/create"
                 className="text-sm text-zinc-400 hover:text-white transition-colors"
               >
-                Create Escrow
+                Post Bounty
               </Link>
               <Link
                 href="/dashboard"

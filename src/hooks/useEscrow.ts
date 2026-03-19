@@ -1,6 +1,6 @@
 "use client";
 
-import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { useReadContract, useReadContracts, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { ESCROW_ABI, ESCROW_CONTRACT_ADDRESS, TIP20_ABI } from "@/config/contracts";
 
 export type EscrowStatus = "Active" | "Released" | "Refunded" | "Disputed" | "Expired";
@@ -31,6 +31,60 @@ export function useEscrowCount() {
     abi: ESCROW_ABI,
     functionName: "nextEscrowId",
   });
+}
+
+// Batch-reads all escrows on-chain. Used by the bounties page.
+export function useAllEscrowsData(count: number) {
+  const contracts = Array.from({ length: count }, (_, i) => ({
+    address: ESCROW_CONTRACT_ADDRESS as `0x${string}`,
+    abi: ESCROW_ABI,
+    functionName: "getEscrow" as const,
+    args: [BigInt(i)] as [bigint],
+  }));
+
+  const { data, isLoading, isError } = useReadContracts({
+    contracts,
+    query: { enabled: count > 0 },
+  });
+
+  const parsed = (data ?? [])
+    .map((result, i) => {
+      if (result.status !== "success" || !result.result) return null;
+      const info = result.result as {
+        depositor: string;
+        recipient: string;
+        token: string;
+        amount: bigint;
+        createdAt: bigint;
+        deadline: bigint;
+        releaseTime: bigint;
+        status: number;
+        condition: number;
+        memo: string;
+        description: string;
+        approvalCount: bigint;
+        requiredApprovals: bigint;
+      };
+      return {
+        id: BigInt(i),
+        depositor: info.depositor,
+        recipient: info.recipient,
+        token: info.token,
+        amount: info.amount,
+        createdAt: info.createdAt,
+        deadline: info.deadline,
+        releaseTime: info.releaseTime,
+        status: STATUS_MAP[Number(info.status)] ?? "Active",
+        condition: CONDITION_MAP[Number(info.condition)] ?? "AgentApproval",
+        memo: info.memo,
+        description: info.description,
+        approvalCount: info.approvalCount,
+        requiredApprovals: info.requiredApprovals,
+      } as EscrowData & { id: bigint };
+    })
+    .filter((e): e is EscrowData & { id: bigint } => e !== null);
+
+  return { data: parsed, isLoading, isError };
 }
 
 export function useEscrowData(escrowId: bigint) {
