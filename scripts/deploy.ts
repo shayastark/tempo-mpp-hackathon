@@ -4,11 +4,11 @@ import path from "path";
 import { createWalletClient, createPublicClient, http, defineChain } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 
-const tempoTestnet = defineChain({
-  id: 1996,
-  name: "Tempo Testnet",
+const tempoMainnet = defineChain({
+  id: 1998,
+  name: "Tempo",
   nativeCurrency: { name: "pathUSD", symbol: "pathUSD", decimals: 6 },
-  rpcUrls: { default: { http: ["https://rpc.testnet.tempo.xyz"] } },
+  rpcUrls: { default: { http: ["https://rpc.tempo.xyz"] } },
 });
 
 async function main() {
@@ -69,13 +69,13 @@ async function main() {
   console.log("Deployer:", account.address);
 
   const publicClient = createPublicClient({
-    chain: tempoTestnet,
+    chain: tempoMainnet,
     transport: http(),
   });
 
   const walletClient = createWalletClient({
     account,
-    chain: tempoTestnet,
+    chain: tempoMainnet,
     transport: http(),
   });
 
