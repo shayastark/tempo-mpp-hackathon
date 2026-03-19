@@ -43,6 +43,7 @@ export default function DeployPage() {
       abi: artifact.abi,
       bytecode: artifact.bytecode as `0x${string}`,
       args: [collector],
+      chainId: tempoMainnet.id,
     });
   };
 
