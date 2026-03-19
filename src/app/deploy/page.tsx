@@ -4,13 +4,17 @@ import { useState } from "react";
 import {
   useAccount,
   useDeployContract,
+  useSwitchChain,
   useWaitForTransactionReceipt,
 } from "wagmi";
 import artifact from "../../../contracts/artifacts/TempoEscrow.json";
+import { tempoMainnet } from "@/config/chains";
 
 export default function DeployPage() {
   const { address, isConnected, chain } = useAccount();
+  const { switchChain } = useSwitchChain();
   const [feeCollector, setFeeCollector] = useState("");
+  const isWrongChain = chain?.id !== tempoMainnet.id;
 
   const {
     deployContract,
@@ -68,6 +72,21 @@ export default function DeployPage() {
 
       {isConnected && (
         <div className="space-y-6">
+          {isWrongChain && (
+            <div className="bg-red-900/20 border border-red-700/50 rounded-lg p-4 flex items-center justify-between">
+              <p className="text-red-200 text-sm">
+                You are connected to <strong>{chain?.name || "an unsupported network"}</strong>.
+                This contract must be deployed on <strong>Tempo</strong> (Chain ID {tempoMainnet.id}).
+              </p>
+              <button
+                onClick={() => switchChain({ chainId: tempoMainnet.id })}
+                className="ml-4 shrink-0 bg-red-600 hover:bg-red-500 text-white text-sm px-4 py-2 rounded-lg font-medium transition-colors"
+              >
+                Switch to Tempo
+              </button>
+            </div>
+          )}
+
           <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
             <h2 className="text-lg font-semibold mb-4">Deployment Details</h2>
 
@@ -103,7 +122,7 @@ export default function DeployPage() {
 
           <button
             onClick={handleDeploy}
-            disabled={deploying || confirming}
+            disabled={deploying || confirming || isWrongChain}
             className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-800 disabled:text-zinc-500 text-white px-6 py-3 rounded-lg font-medium transition-colors"
           >
             {deploying
