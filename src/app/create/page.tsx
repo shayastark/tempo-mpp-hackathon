@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import Link from "next/link";
 import { useAccount } from "wagmi";
-import { parseUnits, encodeAbiParameters, pad } from "viem";
+import { parseUnits, pad } from "viem";
 import { useCreateEscrow, useApproveToken, ZERO_ADDRESS } from "@/hooks/useEscrow";
 import { DEFAULT_TOKEN } from "@/config/contracts";
 
@@ -20,6 +21,9 @@ export default function CreateEscrowPage() {
 
   const [isBounty, setIsBounty] = useState(false);
   const [step, setStep] = useState<"form" | "approve" | "create">("form");
+  // Capture success in local state so it survives wagmi re-renders / state resets
+  const [succeeded, setSucceeded] = useState(false);
+  useEffect(() => { if (isSuccess) setSucceeded(true); }, [isSuccess]);
   const [form, setForm] = useState({
     recipient: "",
     token: DEFAULT_TOKEN,
@@ -85,24 +89,35 @@ export default function CreateEscrowPage() {
     );
   }
 
-  if (isSuccess) {
+  if (succeeded) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-20 text-center">
         <div className="bg-green-900/30 border border-green-700 rounded-xl p-8">
+          <div className="text-4xl mb-4">✓</div>
           <h2 className="text-2xl font-bold text-green-400 mb-2">
             {isBounty ? "Bounty Created!" : "Escrow Created!"}
           </h2>
-          <p className="text-zinc-300 mb-4">
+          <p className="text-zinc-300 mb-6">
             {isBounty
-              ? "Your bounty is live. An agent will assign the recipient when it's completed."
-              : "Your escrow has been created successfully."}
+              ? "Your bounty is live. It will appear in the Bounties list shortly (the RPC may take a few seconds to index)."
+              : "Your escrow has been created and is now on-chain."}
           </p>
-          <a
-            href="/dashboard"
-            className="inline-block bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors"
-          >
-            View Dashboard
-          </a>
+          <div className="flex justify-center gap-3 flex-wrap">
+            {isBounty && (
+              <Link
+                href="/bounties"
+                className="inline-block bg-amber-600 hover:bg-amber-500 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors"
+              >
+                View Bounties
+              </Link>
+            )}
+            <Link
+              href="/dashboard"
+              className="inline-block bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors"
+            >
+              View Dashboard
+            </Link>
+          </div>
         </div>
       </div>
     );

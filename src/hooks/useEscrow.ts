@@ -36,29 +36,52 @@ export function useEscrowCount() {
   });
 }
 
-// Batch-reads all escrows on-chain. Used by the bounties page.
+// Batch-reads all escrows + their social data on-chain. Used by the bounties page.
+// Each escrow needs two calls: getEscrow (main data) + getEscrowSocial (socialHandle/platform).
+// Calls are interleaved: [getEscrow(0), getEscrowSocial(0), getEscrow(1), getEscrowSocial(1), ...]
 export function useAllEscrowsData(count: number) {
-  const contracts = Array.from({ length: count }, (_, i) => ({
-    address: ESCROW_CONTRACT_ADDRESS as `0x${string}`,
-    abi: ESCROW_ABI as Abi,
-    functionName: "getEscrow",
-    args: [BigInt(i)],
-  }));
+  const contracts = Array.from({ length: count }, (_, i) => [
+    {
+      address: ESCROW_CONTRACT_ADDRESS as `0x${string}`,
+      abi: ESCROW_ABI as Abi,
+      functionName: "getEscrow",
+      args: [BigInt(i)],
+    },
+    {
+      address: ESCROW_CONTRACT_ADDRESS as `0x${string}`,
+      abi: ESCROW_ABI as Abi,
+      functionName: "getEscrowSocial",
+      args: [BigInt(i)],
+    },
+  ]).flat();
 
   const { data, isLoading, isError } = useReadContracts({
     contracts,
-    query: { enabled: count > 0 },
+    query: {
+      enabled: count > 0,
+      // Poll every 15s instead of constantly to avoid 429s on the public RPC.
+      // Set NEXT_PUBLIC_TEMPO_RPC_URL to a private endpoint to remove this limit.
+      staleTime: 15_000,
+      refetchInterval: 15_000,
+    },
   });
 
-  const parsed = (data ?? [])
-    .map((result, i) => {
-      if (result.status !== "success" || !result.result) return null;
-      return {
-        id: BigInt(i),
-        ...parseEscrowInfo(result.result as RawEscrowInfo),
-      };
-    })
-    .filter((e): e is EscrowData & { id: bigint } => e !== null);
+  const parsed = Array.from({ length: count }, (_, i) => {
+    const mainResult = data?.[i * 2];
+    const socialResult = data?.[i * 2 + 1];
+    if (mainResult?.status !== "success" || !mainResult.result) return null;
+
+    const social = socialResult?.status === "success" && socialResult.result
+      ? (socialResult.result as { socialHandle: string; socialPlatform: string })
+      : { socialHandle: "", socialPlatform: "" };
+
+    return {
+      id: BigInt(i),
+      ...parseEscrowInfo(mainResult.result as RawEscrowInfo),
+      socialHandle: social.socialHandle ?? "",
+      socialPlatform: social.socialPlatform ?? "",
+    };
+  }).filter((e): e is EscrowData & { id: bigint } => e !== null);
 
   return { data: parsed, isLoading, isError };
 }
@@ -168,20 +191,18 @@ export function useCreateEscrow() {
       abi: ESCROW_ABI,
       functionName: "createEscrow",
       args: [
-        {
-          recipient: params.recipient,
-          token: params.token,
-          amount: params.amount,
-          deadline: params.deadline,
-          releaseTime: params.releaseTime,
-          condition: params.condition,
-          agents: params.agents,
-          requiredApprovals: params.requiredApprovals,
-          memo: params.memo,
-          description: params.description,
-          socialHandle: params.socialHandle,
-          socialPlatform: params.socialPlatform,
-        },
+        params.recipient,
+        params.token,
+        params.amount,
+        params.deadline,
+        params.releaseTime,
+        params.condition,
+        params.agents,
+        params.requiredApprovals,
+        params.memo,
+        params.description,
+        params.socialHandle,
+        params.socialPlatform,
       ],
     });
   };
