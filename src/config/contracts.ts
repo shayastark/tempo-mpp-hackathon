@@ -1,5 +1,5 @@
 // Contract addresses - update after deployment
-export const ESCROW_CONTRACT_ADDRESS = "0x0000000000000000000000000000000000000000" as const;
+export const ESCROW_CONTRACT_ADDRESS = "0xFc678Ea5e41453Ba6685b97713f78D881639E6FB" as const;
 
 // Known TIP-20 token addresses on Tempo
 export const KNOWN_TOKENS = {
