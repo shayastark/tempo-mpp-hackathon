@@ -23,6 +23,8 @@ export interface EscrowData {
   description: string;
   approvalCount: bigint;
   requiredApprovals: bigint;
+  socialHandle: string;
+  socialPlatform: string;
 }
 
 export function useEscrowCount() {
@@ -50,41 +52,52 @@ export function useAllEscrowsData(count: number) {
   const parsed = (data ?? [])
     .map((result, i) => {
       if (result.status !== "success" || !result.result) return null;
-      const info = result.result as {
-        depositor: string;
-        recipient: string;
-        token: string;
-        amount: bigint;
-        createdAt: bigint;
-        deadline: bigint;
-        releaseTime: bigint;
-        status: number;
-        condition: number;
-        memo: string;
-        description: string;
-        approvalCount: bigint;
-        requiredApprovals: bigint;
-      };
       return {
         id: BigInt(i),
-        depositor: info.depositor,
-        recipient: info.recipient,
-        token: info.token,
-        amount: info.amount,
-        createdAt: info.createdAt,
-        deadline: info.deadline,
-        releaseTime: info.releaseTime,
-        status: STATUS_MAP[Number(info.status)] ?? "Active",
-        condition: CONDITION_MAP[Number(info.condition)] ?? "AgentApproval",
-        memo: info.memo,
-        description: info.description,
-        approvalCount: info.approvalCount,
-        requiredApprovals: info.requiredApprovals,
-      } as EscrowData & { id: bigint };
+        ...parseEscrowInfo(result.result as RawEscrowInfo),
+      };
     })
     .filter((e): e is EscrowData & { id: bigint } => e !== null);
 
   return { data: parsed, isLoading, isError };
+}
+
+type RawEscrowInfo = {
+  depositor: string;
+  recipient: string;
+  token: string;
+  amount: bigint;
+  createdAt: bigint;
+  deadline: bigint;
+  releaseTime: bigint;
+  status: number;
+  condition: number;
+  memo: string;
+  description: string;
+  approvalCount: bigint;
+  requiredApprovals: bigint;
+  socialHandle: string;
+  socialPlatform: string;
+};
+
+function parseEscrowInfo(info: RawEscrowInfo): EscrowData {
+  return {
+    depositor: info.depositor,
+    recipient: info.recipient,
+    token: info.token,
+    amount: info.amount,
+    createdAt: info.createdAt,
+    deadline: info.deadline,
+    releaseTime: info.releaseTime,
+    status: STATUS_MAP[Number(info.status)] ?? "Active",
+    condition: CONDITION_MAP[Number(info.condition)] ?? "AgentApproval",
+    memo: info.memo,
+    description: info.description,
+    approvalCount: info.approvalCount,
+    requiredApprovals: info.requiredApprovals,
+    socialHandle: info.socialHandle ?? "",
+    socialPlatform: info.socialPlatform ?? "",
+  };
 }
 
 export function useEscrowData(escrowId: bigint) {
@@ -95,38 +108,8 @@ export function useEscrowData(escrowId: bigint) {
     args: [escrowId],
   });
 
-  const info = data as {
-    id: bigint;
-    depositor: string;
-    recipient: string;
-    token: string;
-    amount: bigint;
-    createdAt: bigint;
-    deadline: bigint;
-    releaseTime: bigint;
-    status: number;
-    condition: number;
-    memo: string;
-    description: string;
-    approvalCount: bigint;
-    requiredApprovals: bigint;
-  } | undefined;
-  const parsed: EscrowData | undefined = info
-    ? {
-        depositor: info.depositor,
-        recipient: info.recipient,
-        token: info.token,
-        amount: info.amount,
-        createdAt: info.createdAt,
-        deadline: info.deadline,
-        releaseTime: info.releaseTime,
-        status: STATUS_MAP[Number(info.status)] || "Active",
-        condition: CONDITION_MAP[Number(info.condition)] || "AgentApproval",
-        memo: info.memo,
-        description: info.description,
-        approvalCount: info.approvalCount,
-        requiredApprovals: info.requiredApprovals,
-      }
+  const parsed: EscrowData | undefined = data
+    ? parseEscrowInfo(data as RawEscrowInfo)
     : undefined;
 
   return { data: parsed, ...rest };
