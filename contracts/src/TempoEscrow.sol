@@ -108,6 +108,13 @@ contract TempoEscrow {
         bool verified
     );
 
+    event BountyClaimed(
+        uint256 indexed escrowId,
+        address indexed claimant,
+        uint256 amount,
+        address claimedBy
+    );
+
     // ─── Modifiers ───────────────────────────────────────────────────────
 
     modifier onlyOwner() {
@@ -160,7 +167,7 @@ contract TempoEscrow {
         string calldata socialHandle,
         string calldata socialPlatform
     ) external returns (uint256 escrowId) {
-        require(recipient != address(0), "Invalid recipient");
+        // recipient can be address(0) for open bounties
         require(amount > 0, "Amount must be > 0");
         require(deadline > block.timestamp, "Deadline must be future");
         require(token != address(0), "Invalid token");
@@ -206,7 +213,9 @@ contract TempoEscrow {
         }
 
         userEscrows[msg.sender].push(escrowId);
-        recipientEscrows[recipient].push(escrowId);
+        if (recipient != address(0)) {
+            recipientEscrows[recipient].push(escrowId);
+        }
 
         emit EscrowCreated(escrowId, msg.sender, recipient, token, amount, condition, memo);
     }
@@ -266,6 +275,37 @@ contract TempoEscrow {
         if (verified) {
             _release(escrowId);
         }
+    }
+
+    /// @notice Agent assigns a recipient and releases funds for an open bounty
+    /// @param escrowId The bounty escrow to claim
+    /// @param claimant The address that completed the bounty
+    function claimBounty(uint256 escrowId, address claimant)
+        external
+        escrowExists(escrowId)
+        onlyActive(escrowId)
+    {
+        Escrow storage e = escrows[escrowId];
+        require(e.recipient == address(0), "Not an open bounty");
+        require(claimant != address(0), "Invalid claimant");
+        require(_isAgent(e, msg.sender), "Not an authorized agent");
+
+        // Assign recipient and release atomically
+        e.recipient = claimant;
+        recipientEscrows[claimant].push(escrowId);
+
+        e.status = EscrowStatus.Released;
+
+        uint256 fee = (e.amount * PROTOCOL_FEE_BPS) / 10000;
+        uint256 payout = e.amount - fee;
+
+        if (fee > 0) {
+            ITIP20(e.token).transfer(feeCollector, fee);
+        }
+        ITIP20(e.token).transfer(claimant, payout);
+
+        emit BountyClaimed(escrowId, claimant, payout, msg.sender);
+        emit EscrowReleased(escrowId, claimant, payout, msg.sender);
     }
 
     /// @notice Refund expired escrow to depositor

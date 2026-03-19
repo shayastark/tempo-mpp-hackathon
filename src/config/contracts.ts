@@ -73,6 +73,16 @@ export const ESCROW_ABI = [
       { name: "verified", type: "bool", indexed: false },
     ],
   },
+  {
+    type: "event",
+    name: "BountyClaimed",
+    inputs: [
+      { name: "escrowId", type: "uint256", indexed: true },
+      { name: "claimant", type: "address", indexed: true },
+      { name: "amount", type: "uint256", indexed: false },
+      { name: "claimedBy", type: "address", indexed: false },
+    ],
+  },
   // Read functions
   {
     type: "function",
@@ -169,6 +179,16 @@ export const ESCROW_ABI = [
       { name: "socialPlatform", type: "string" },
     ],
     outputs: [{ name: "escrowId", type: "uint256" }],
+    stateMutability: "nonpayable",
+  },
+  {
+    type: "function",
+    name: "claimBounty",
+    inputs: [
+      { name: "escrowId", type: "uint256" },
+      { name: "claimant", type: "address" },
+    ],
+    outputs: [],
     stateMutability: "nonpayable",
   },
   {

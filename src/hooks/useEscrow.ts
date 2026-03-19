@@ -214,6 +214,28 @@ export function useDispute() {
   return { disputeEscrow, hash, isPending, isConfirming, isSuccess, error };
 }
 
+export function useClaimBounty() {
+  const { writeContract, data: hash, isPending, error } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+
+  const claim = (escrowId: bigint, claimant: `0x${string}`) => {
+    writeContract({
+      address: ESCROW_CONTRACT_ADDRESS,
+      abi: ESCROW_ABI,
+      functionName: "claimBounty",
+      args: [escrowId, claimant],
+    });
+  };
+
+  return { claim, hash, isPending, isConfirming, isSuccess, error };
+}
+
+export const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as const;
+
+export function isBounty(escrow: EscrowData): boolean {
+  return escrow.recipient === ZERO_ADDRESS;
+}
+
 export function useApproveToken() {
   const { writeContract, data: hash, isPending, error } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
