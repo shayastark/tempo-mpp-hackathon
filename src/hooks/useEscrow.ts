@@ -5,8 +5,10 @@ import type { Abi } from "viem";
 import { ESCROW_ABI, ESCROW_CONTRACT_ADDRESS, TIP20_ABI, DEFAULT_TOKEN } from "@/config/contracts";
 
 // Tempo has no native gas token — every tx must declare which TIP-20 token pays
-// for gas. Without this field the wallet cannot simulate the tx and shows
-// "Something is wrong".
+// for gas via feeToken. For local accounts (webAuthn/secp256k1) this is auto-
+// filled by Tempo's prepareTransactionRequest middleware from the chain config.
+// For injected wallets (Coinbase Wallet, MetaMask) prepareTransactionRequest is
+// NOT called, so we must include feeToken explicitly on every write call.
 const FEE_TOKEN = DEFAULT_TOKEN as `0x${string}`;
 
 export type EscrowStatus = "Active" | "Released" | "Refunded" | "Disputed" | "Expired";
@@ -64,8 +66,6 @@ export function useAllEscrowsData(count: number) {
     contracts,
     query: {
       enabled: count > 0,
-      // Poll every 15s instead of constantly to avoid 429s on the public RPC.
-      // Set NEXT_PUBLIC_TEMPO_RPC_URL to a private endpoint to remove this limit.
       staleTime: 15_000,
       refetchInterval: 15_000,
     },
@@ -170,9 +170,11 @@ export function useRecipientEscrows(address: `0x${string}` | undefined) {
 // ---------------------------------------------------------------------------
 // Write hooks
 //
-// Send transactions directly to the wallet via writeContract with feeToken.
-// Tempo has no native gas token so feeToken (USDC) must be included on every
-// write call. The wallet handles gas estimation itself.
+// Tempo has no native gas token — gas is paid in TIP-20 USDC. For local
+// accounts the chain-level feeToken auto-fills via prepareTransactionRequest,
+// but injected wallets (json-rpc accounts) skip that middleware entirely.
+// We pass feeToken explicitly on every write call so both paths work.
+// The `as any` cast is needed because wagmi's types don't include feeToken.
 // ---------------------------------------------------------------------------
 
 export function useCreateEscrow() {
