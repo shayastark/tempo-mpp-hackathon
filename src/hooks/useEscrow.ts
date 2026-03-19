@@ -1,9 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { useReadContract, useReadContracts, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { simulateContract } from "@wagmi/core";
 import type { Abi } from "viem";
 import { ESCROW_ABI, ESCROW_CONTRACT_ADDRESS, TIP20_ABI, DEFAULT_TOKEN } from "@/config/contracts";
 import { tempoMainnet } from "@/config/chains";
+import { wagmiConfig } from "@/config/wagmi";
 
 // Tempo has no native gas token — every tx must declare which TIP-20 token pays
 // for gas. Without this field the wallet cannot simulate the tx and shows
@@ -173,11 +176,26 @@ export function useRecipientEscrows(address: `0x${string}` | undefined) {
   });
 }
 
-export function useCreateEscrow() {
-  const { writeContract, data: hash, isPending, error } = useWriteContract();
-  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+// ---------------------------------------------------------------------------
+// Write hooks
+//
+// Injected wallets (Coinbase Wallet, MetaMask) do their own gas estimation
+// using their own RPC, which does NOT use viem's Tempo-aware formatters.
+// The Tempo RPC strips EIP-1559 fields for estimateGas, but the wallet
+// doesn't know this and sends them anyway — causing "something went wrong".
+//
+// Fix: simulate the call first using the app's transport (which goes through
+// viem's Tempo chain formatters and the /api/rpc proxy), then pass the
+// prepared request (which includes the correct gas estimate) to the wallet.
+// The wallet sees gas is already set and skips its own estimation.
+// ---------------------------------------------------------------------------
 
-  const create = (params: {
+export function useCreateEscrow() {
+  const { writeContract, data: hash, isPending, error: writeError } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+  const [simError, setSimError] = useState<Error | null>(null);
+
+  const create = async (params: {
     recipient: `0x${string}`;
     token: `0x${string}`;
     amount: bigint;
@@ -191,146 +209,201 @@ export function useCreateEscrow() {
     socialHandle: string;
     socialPlatform: string;
   }) => {
-    writeContract({
-      address: ESCROW_CONTRACT_ADDRESS,
-      abi: ESCROW_ABI,
-      functionName: "createEscrow",
-      args: [
-        {
-          recipient: params.recipient,
-          token: params.token,
-          amount: params.amount,
-          deadline: params.deadline,
-          releaseTime: params.releaseTime,
-          condition: params.condition,
-          agents: params.agents,
-          requiredApprovals: params.requiredApprovals,
-          memo: params.memo,
-          description: params.description,
-          socialHandle: params.socialHandle,
-          socialPlatform: params.socialPlatform,
-        },
-      ],
-      chainId: tempoMainnet.id,
-      // @ts-expect-error — Tempo-specific transaction field
-      feeToken: FEE_TOKEN,
-    });
+    try {
+      setSimError(null);
+      const { request } = await simulateContract(wagmiConfig, {
+        address: ESCROW_CONTRACT_ADDRESS,
+        abi: ESCROW_ABI,
+        functionName: "createEscrow",
+        args: [
+          {
+            recipient: params.recipient,
+            token: params.token,
+            amount: params.amount,
+            deadline: params.deadline,
+            releaseTime: params.releaseTime,
+            condition: params.condition,
+            agents: params.agents,
+            requiredApprovals: params.requiredApprovals,
+            memo: params.memo,
+            description: params.description,
+            socialHandle: params.socialHandle,
+            socialPlatform: params.socialPlatform,
+          },
+        ],
+        chainId: tempoMainnet.id,
+        feeToken: FEE_TOKEN,
+      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      writeContract(request as any);
+    } catch (e) {
+      setSimError(e as Error);
+    }
   };
 
+  const error = writeError || simError;
   return { create, hash, isPending, isConfirming, isSuccess, error };
 }
 
 export function useApproveRelease() {
-  const { writeContract, data: hash, isPending, error } = useWriteContract();
+  const { writeContract, data: hash, isPending, error: writeError } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+  const [simError, setSimError] = useState<Error | null>(null);
 
-  const approve = (escrowId: bigint) => {
-    writeContract({
-      address: ESCROW_CONTRACT_ADDRESS,
-      abi: ESCROW_ABI,
-      functionName: "approveRelease",
-      args: [escrowId],
-      chainId: tempoMainnet.id,
-      // @ts-expect-error — Tempo-specific transaction field
-      feeToken: FEE_TOKEN,
-    });
+  const approve = async (escrowId: bigint) => {
+    try {
+      setSimError(null);
+      const { request } = await simulateContract(wagmiConfig, {
+        address: ESCROW_CONTRACT_ADDRESS,
+        abi: ESCROW_ABI,
+        functionName: "approveRelease",
+        args: [escrowId],
+        chainId: tempoMainnet.id,
+        feeToken: FEE_TOKEN,
+      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      writeContract(request as any);
+    } catch (e) {
+      setSimError(e as Error);
+    }
   };
 
+  const error = writeError || simError;
   return { approve, hash, isPending, isConfirming, isSuccess, error };
 }
 
 export function useReleaseTimeLock() {
-  const { writeContract, data: hash, isPending, error } = useWriteContract();
+  const { writeContract, data: hash, isPending, error: writeError } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+  const [simError, setSimError] = useState<Error | null>(null);
 
-  const release = (escrowId: bigint) => {
-    writeContract({
-      address: ESCROW_CONTRACT_ADDRESS,
-      abi: ESCROW_ABI,
-      functionName: "releaseTimeLock",
-      args: [escrowId],
-      chainId: tempoMainnet.id,
-      // @ts-expect-error — Tempo-specific transaction field
-      feeToken: FEE_TOKEN,
-    });
+  const release = async (escrowId: bigint) => {
+    try {
+      setSimError(null);
+      const { request } = await simulateContract(wagmiConfig, {
+        address: ESCROW_CONTRACT_ADDRESS,
+        abi: ESCROW_ABI,
+        functionName: "releaseTimeLock",
+        args: [escrowId],
+        chainId: tempoMainnet.id,
+        feeToken: FEE_TOKEN,
+      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      writeContract(request as any);
+    } catch (e) {
+      setSimError(e as Error);
+    }
   };
 
+  const error = writeError || simError;
   return { release, hash, isPending, isConfirming, isSuccess, error };
 }
 
 export function useReleaseSocialVerified() {
-  const { writeContract, data: hash, isPending, error } = useWriteContract();
+  const { writeContract, data: hash, isPending, error: writeError } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+  const [simError, setSimError] = useState<Error | null>(null);
 
-  const release = (escrowId: bigint, verified: boolean) => {
-    writeContract({
-      address: ESCROW_CONTRACT_ADDRESS,
-      abi: ESCROW_ABI,
-      functionName: "releaseSocialVerified",
-      args: [escrowId, verified],
-      chainId: tempoMainnet.id,
-      // @ts-expect-error — Tempo-specific transaction field
-      feeToken: FEE_TOKEN,
-    });
+  const release = async (escrowId: bigint, verified: boolean) => {
+    try {
+      setSimError(null);
+      const { request } = await simulateContract(wagmiConfig, {
+        address: ESCROW_CONTRACT_ADDRESS,
+        abi: ESCROW_ABI,
+        functionName: "releaseSocialVerified",
+        args: [escrowId, verified],
+        chainId: tempoMainnet.id,
+        feeToken: FEE_TOKEN,
+      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      writeContract(request as any);
+    } catch (e) {
+      setSimError(e as Error);
+    }
   };
 
+  const error = writeError || simError;
   return { release, hash, isPending, isConfirming, isSuccess, error };
 }
 
 export function useRefundExpired() {
-  const { writeContract, data: hash, isPending, error } = useWriteContract();
+  const { writeContract, data: hash, isPending, error: writeError } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+  const [simError, setSimError] = useState<Error | null>(null);
 
-  const refund = (escrowId: bigint) => {
-    writeContract({
-      address: ESCROW_CONTRACT_ADDRESS,
-      abi: ESCROW_ABI,
-      functionName: "refundExpired",
-      args: [escrowId],
-      chainId: tempoMainnet.id,
-      // @ts-expect-error — Tempo-specific transaction field
-      feeToken: FEE_TOKEN,
-    });
+  const refund = async (escrowId: bigint) => {
+    try {
+      setSimError(null);
+      const { request } = await simulateContract(wagmiConfig, {
+        address: ESCROW_CONTRACT_ADDRESS,
+        abi: ESCROW_ABI,
+        functionName: "refundExpired",
+        args: [escrowId],
+        chainId: tempoMainnet.id,
+        feeToken: FEE_TOKEN,
+      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      writeContract(request as any);
+    } catch (e) {
+      setSimError(e as Error);
+    }
   };
 
+  const error = writeError || simError;
   return { refund, hash, isPending, isConfirming, isSuccess, error };
 }
 
 export function useDispute() {
-  const { writeContract, data: hash, isPending, error } = useWriteContract();
+  const { writeContract, data: hash, isPending, error: writeError } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+  const [simError, setSimError] = useState<Error | null>(null);
 
-  const disputeEscrow = (escrowId: bigint) => {
-    writeContract({
-      address: ESCROW_CONTRACT_ADDRESS,
-      abi: ESCROW_ABI,
-      functionName: "dispute",
-      args: [escrowId],
-      chainId: tempoMainnet.id,
-      // @ts-expect-error — Tempo-specific transaction field
-      feeToken: FEE_TOKEN,
-    });
+  const disputeEscrow = async (escrowId: bigint) => {
+    try {
+      setSimError(null);
+      const { request } = await simulateContract(wagmiConfig, {
+        address: ESCROW_CONTRACT_ADDRESS,
+        abi: ESCROW_ABI,
+        functionName: "dispute",
+        args: [escrowId],
+        chainId: tempoMainnet.id,
+        feeToken: FEE_TOKEN,
+      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      writeContract(request as any);
+    } catch (e) {
+      setSimError(e as Error);
+    }
   };
 
+  const error = writeError || simError;
   return { disputeEscrow, hash, isPending, isConfirming, isSuccess, error };
 }
 
 export function useClaimBounty() {
-  const { writeContract, data: hash, isPending, error } = useWriteContract();
+  const { writeContract, data: hash, isPending, error: writeError } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+  const [simError, setSimError] = useState<Error | null>(null);
 
-  const claim = (escrowId: bigint, claimant: `0x${string}`) => {
-    writeContract({
-      address: ESCROW_CONTRACT_ADDRESS,
-      abi: ESCROW_ABI,
-      functionName: "claimBounty",
-      args: [escrowId, claimant],
-      chainId: tempoMainnet.id,
-      // @ts-expect-error — Tempo-specific transaction field
-      feeToken: FEE_TOKEN,
-    });
+  const claim = async (escrowId: bigint, claimant: `0x${string}`) => {
+    try {
+      setSimError(null);
+      const { request } = await simulateContract(wagmiConfig, {
+        address: ESCROW_CONTRACT_ADDRESS,
+        abi: ESCROW_ABI,
+        functionName: "claimBounty",
+        args: [escrowId, claimant],
+        chainId: tempoMainnet.id,
+        feeToken: FEE_TOKEN,
+      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      writeContract(request as any);
+    } catch (e) {
+      setSimError(e as Error);
+    }
   };
 
+  const error = writeError || simError;
   return { claim, hash, isPending, isConfirming, isSuccess, error };
 }
 
@@ -341,21 +414,29 @@ export function isBounty(escrow: EscrowData): boolean {
 }
 
 export function useApproveToken() {
-  const { writeContract, data: hash, isPending, error } = useWriteContract();
+  const { writeContract, data: hash, isPending, error: writeError } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
+  const [simError, setSimError] = useState<Error | null>(null);
 
-  const approveToken = (token: `0x${string}`, amount: bigint) => {
-    writeContract({
-      address: token,
-      abi: TIP20_ABI,
-      functionName: "approve",
-      args: [ESCROW_CONTRACT_ADDRESS, amount],
-      chainId: tempoMainnet.id,
-      // @ts-expect-error — Tempo-specific transaction field
-      feeToken: FEE_TOKEN,
-    });
+  const approveToken = async (token: `0x${string}`, amount: bigint) => {
+    try {
+      setSimError(null);
+      const { request } = await simulateContract(wagmiConfig, {
+        address: token,
+        abi: TIP20_ABI,
+        functionName: "approve",
+        args: [ESCROW_CONTRACT_ADDRESS, amount],
+        chainId: tempoMainnet.id,
+        feeToken: FEE_TOKEN,
+      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      writeContract(request as any);
+    } catch (e) {
+      setSimError(e as Error);
+    }
   };
 
+  const error = writeError || simError;
   return { approveToken, hash, isPending, isConfirming, isSuccess, error };
 }
 
