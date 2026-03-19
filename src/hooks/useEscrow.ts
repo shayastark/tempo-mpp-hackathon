@@ -41,22 +41,37 @@ export function useEscrowData(escrowId: bigint) {
     args: [escrowId],
   });
 
-  const tuple = data as [string, string, string, bigint, bigint, bigint, bigint, number, number, string, string, bigint, bigint] | undefined;
-  const parsed: EscrowData | undefined = tuple
+  const info = data as {
+    id: bigint;
+    depositor: string;
+    recipient: string;
+    token: string;
+    amount: bigint;
+    createdAt: bigint;
+    deadline: bigint;
+    releaseTime: bigint;
+    status: number;
+    condition: number;
+    memo: string;
+    description: string;
+    approvalCount: bigint;
+    requiredApprovals: bigint;
+  } | undefined;
+  const parsed: EscrowData | undefined = info
     ? {
-        depositor: tuple[0],
-        recipient: tuple[1],
-        token: tuple[2],
-        amount: tuple[3],
-        createdAt: tuple[4],
-        deadline: tuple[5],
-        releaseTime: tuple[6],
-        status: STATUS_MAP[Number(tuple[7])] || "Active",
-        condition: CONDITION_MAP[Number(tuple[8])] || "AgentApproval",
-        memo: tuple[9],
-        description: tuple[10],
-        approvalCount: tuple[11],
-        requiredApprovals: tuple[12],
+        depositor: info.depositor,
+        recipient: info.recipient,
+        token: info.token,
+        amount: info.amount,
+        createdAt: info.createdAt,
+        deadline: info.deadline,
+        releaseTime: info.releaseTime,
+        status: STATUS_MAP[Number(info.status)] || "Active",
+        condition: CONDITION_MAP[Number(info.condition)] || "AgentApproval",
+        memo: info.memo,
+        description: info.description,
+        approvalCount: info.approvalCount,
+        requiredApprovals: info.requiredApprovals,
       }
     : undefined;
 
@@ -115,18 +130,20 @@ export function useCreateEscrow() {
       abi: ESCROW_ABI,
       functionName: "createEscrow",
       args: [
-        params.recipient,
-        params.token,
-        params.amount,
-        params.deadline,
-        params.releaseTime,
-        params.condition,
-        params.agents,
-        params.requiredApprovals,
-        params.memo,
-        params.description,
-        params.socialHandle,
-        params.socialPlatform,
+        {
+          recipient: params.recipient,
+          token: params.token,
+          amount: params.amount,
+          deadline: params.deadline,
+          releaseTime: params.releaseTime,
+          condition: params.condition,
+          agents: params.agents,
+          requiredApprovals: params.requiredApprovals,
+          memo: params.memo,
+          description: params.description,
+          socialHandle: params.socialHandle,
+          socialPlatform: params.socialPlatform,
+        },
       ],
     });
   };

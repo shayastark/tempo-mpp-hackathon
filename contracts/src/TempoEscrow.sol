@@ -139,85 +139,79 @@ contract TempoEscrow {
         feeCollector = _feeCollector;
     }
 
+    // ─── Structs (Input) ───────────────────────────────────────────────
+
+    struct CreateEscrowParams {
+        address recipient;
+        address token;
+        uint256 amount;
+        uint256 deadline;
+        uint256 releaseTime;
+        ReleaseCondition condition;
+        address[] agents;
+        uint256 requiredApprovals;
+        bytes32 memo;
+        string description;
+        string socialHandle;
+        string socialPlatform;
+    }
+
     // ─── Core Functions ──────────────────────────────────────────────────
 
     /// @notice Create a new escrow with TIP-20 tokens
-    /// @param recipient The address that will receive funds on release
-    /// @param token The TIP-20 token address
-    /// @param amount Amount of tokens to escrow
-    /// @param deadline Auto-refund deadline (unix timestamp)
-    /// @param condition The release condition type
-    /// @param agents Array of authorized agent addresses
-    /// @param requiredApprovals Number of approvals needed for MultiSig
-    /// @param memo TIP-20 memo for payment reference
-    /// @param description Human-readable escrow description
-    /// @param socialHandle Optional social media handle
-    /// @param socialPlatform Optional social platform identifier
-    function createEscrow(
-        address recipient,
-        address token,
-        uint256 amount,
-        uint256 deadline,
-        uint256 releaseTime,
-        ReleaseCondition condition,
-        address[] calldata agents,
-        uint256 requiredApprovals,
-        bytes32 memo,
-        string calldata description,
-        string calldata socialHandle,
-        string calldata socialPlatform
-    ) external returns (uint256 escrowId) {
+    /// @param params The escrow creation parameters
+    function createEscrow(CreateEscrowParams calldata params) external returns (uint256 escrowId) {
         // recipient can be address(0) for open bounties
-        require(amount > 0, "Amount must be > 0");
-        require(deadline > block.timestamp, "Deadline must be future");
-        require(token != address(0), "Invalid token");
+        require(params.amount > 0, "Amount must be > 0");
+        require(params.deadline > block.timestamp, "Deadline must be future");
+        require(params.token != address(0), "Invalid token");
 
-        if (condition == ReleaseCondition.MultiSig) {
-            require(agents.length >= requiredApprovals, "Not enough agents");
-            require(requiredApprovals > 0, "Need at least 1 approval");
+        if (params.condition == ReleaseCondition.MultiSig) {
+            require(params.agents.length >= params.requiredApprovals, "Not enough agents");
+            require(params.requiredApprovals > 0, "Need at least 1 approval");
         }
 
-        if (condition == ReleaseCondition.AgentApproval) {
-            require(agents.length > 0, "Need at least 1 agent");
+        if (params.condition == ReleaseCondition.AgentApproval) {
+            require(params.agents.length > 0, "Need at least 1 agent");
         }
 
-        if (condition == ReleaseCondition.TimeLock) {
-            require(releaseTime > block.timestamp, "Release time must be future");
-            require(releaseTime <= deadline, "Release time must be before deadline");
+        if (params.condition == ReleaseCondition.TimeLock) {
+            require(params.releaseTime > block.timestamp, "Release time must be future");
+            require(params.releaseTime <= params.deadline, "Release time must be before deadline");
         }
 
         // Transfer tokens from depositor to this contract
-        require(ITIP20(token).transferFrom(msg.sender, address(this), amount), "Transfer failed");
+        ITIP20(params.token).transferFrom(msg.sender, address(this), params.amount);
 
         escrowId = nextEscrowId++;
 
         Escrow storage e = escrows[escrowId];
         e.id = escrowId;
         e.depositor = msg.sender;
-        e.recipient = recipient;
-        e.token = token;
-        e.amount = amount;
+        e.recipient = params.recipient;
+        e.token = params.token;
+        e.amount = params.amount;
         e.createdAt = block.timestamp;
-        e.deadline = deadline;
-        e.releaseTime = releaseTime;
+        e.deadline = params.deadline;
+        e.releaseTime = params.releaseTime;
         e.status = EscrowStatus.Active;
-        e.condition = condition;
-        e.memo = memo;
-        e.description = description;
-        e.socialHandle = socialHandle;
-        e.socialPlatform = socialPlatform;
-        e.requiredApprovals = requiredApprovals;
+        e.condition = params.condition;
+        e.memo = params.memo;
+        e.description = params.description;
+        e.socialHandle = params.socialHandle;
+        e.socialPlatform = params.socialPlatform;
+        e.requiredApprovals = params.requiredApprovals;
 
-        for (uint256 i = 0; i < agents.length; i++) {
-            e.agents.push(agents[i]);
+        for (uint256 i = 0; i < params.agents.length; i++) {
+            e.agents.push(params.agents[i]);
         }
 
         userEscrows[msg.sender].push(escrowId);
-        if (recipient != address(0)) {
-            recipientEscrows[recipient].push(escrowId);
+        if (params.recipient != address(0)) {
+            recipientEscrows[params.recipient].push(escrowId);
         }
 
-        emit EscrowCreated(escrowId, msg.sender, recipient, token, amount, condition, memo);
+        emit EscrowCreated(escrowId, msg.sender, params.recipient, params.token, params.amount, params.condition, params.memo);
     }
 
     /// @notice Agent approves release of escrowed funds
