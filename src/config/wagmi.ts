@@ -1,6 +1,6 @@
 "use client";
 
-import { http, createConfig } from "wagmi";
+import { http, createConfig, createStorage } from "wagmi";
 import { injected } from "wagmi/connectors";
 import { webAuthn, dangerous_secp256k1, KeyManager } from "wagmi/tempo";
 import { tempoMainnet } from "./chains";
@@ -26,4 +26,10 @@ export const wagmiConfig = createConfig({
       retryDelay: 1500,
     }),
   },
+  // Versioned storage key: incrementing the key suffix discards incompatible
+  // persisted state instead of throwing a migration error.
+  storage: createStorage({
+    storage: typeof window !== "undefined" ? window.localStorage : undefined,
+    key: "tempo-escrow.v1",
+  }),
 });
