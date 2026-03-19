@@ -1,6 +1,7 @@
 "use client";
 
 import { useReadContract, useReadContracts, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import type { Abi } from "viem";
 import { ESCROW_ABI, ESCROW_CONTRACT_ADDRESS, TIP20_ABI } from "@/config/contracts";
 
 export type EscrowStatus = "Active" | "Released" | "Refunded" | "Disputed" | "Expired";
@@ -39,9 +40,9 @@ export function useEscrowCount() {
 export function useAllEscrowsData(count: number) {
   const contracts = Array.from({ length: count }, (_, i) => ({
     address: ESCROW_CONTRACT_ADDRESS as `0x${string}`,
-    abi: ESCROW_ABI,
-    functionName: "getEscrow" as const,
-    args: [BigInt(i)] as [bigint],
+    abi: ESCROW_ABI as Abi,
+    functionName: "getEscrow",
+    args: [BigInt(i)],
   }));
 
   const { data, isLoading, isError } = useReadContracts({
