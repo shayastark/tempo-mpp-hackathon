@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEscrowData, isBounty } from "@/hooks/useEscrow";
 import { formatUnits } from "viem";
+import { KNOWN_TOKENS } from "@/config/contracts";
 
 const STATUS_COLORS: Record<string, string> = {
   Active: "bg-blue-500/20 text-blue-400 border-blue-500/30",
@@ -32,6 +33,7 @@ export function EscrowCard({ escrowId }: { escrowId: bigint }) {
   }
 
   const amount = formatUnits(data.amount, 6);
+  const tokenSymbol = data.token.toLowerCase() === KNOWN_TOKENS.USDC.toLowerCase() ? "USDC" : "tokens";
   const deadline = new Date(Number(data.deadline) * 1000);
   const isOpenBounty = isBounty(data);
 
@@ -68,7 +70,7 @@ export function EscrowCard({ escrowId }: { escrowId: bigint }) {
         <div className="grid grid-cols-3 gap-4 text-sm">
           <div>
             <span className="text-zinc-500">Amount</span>
-            <p className="font-mono font-medium">${amount}</p>
+            <p className="font-mono font-medium">{amount} {tokenSymbol}</p>
           </div>
           <div>
             <span className="text-zinc-500">Condition</span>

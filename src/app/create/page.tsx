@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useAccount } from "wagmi";
 import { parseUnits, encodeAbiParameters, pad } from "viem";
 import { useCreateEscrow, useApproveToken, ZERO_ADDRESS } from "@/hooks/useEscrow";
+import { DEFAULT_TOKEN } from "@/config/contracts";
 
 const RELEASE_CONDITIONS = [
   { value: 0, label: "Agent Approval", description: "A single agent approves the release" },
@@ -21,7 +22,7 @@ export default function CreateEscrowPage() {
   const [step, setStep] = useState<"form" | "approve" | "create">("form");
   const [form, setForm] = useState({
     recipient: "",
-    token: "",
+    token: DEFAULT_TOKEN,
     amount: "",
     deadline: "",
     releaseTime: "",
@@ -91,11 +92,17 @@ export default function CreateEscrowPage() {
           <h2 className="text-2xl font-bold text-green-400 mb-2">
             {isBounty ? "Bounty Created!" : "Escrow Created!"}
           </h2>
-          <p className="text-zinc-300">
+          <p className="text-zinc-300 mb-4">
             {isBounty
               ? "Your bounty is live. An agent will assign the recipient when it's completed."
-              : "Your escrow has been created successfully. View it on the dashboard."}
+              : "Your escrow has been created successfully."}
           </p>
+          <a
+            href="/dashboard"
+            className="inline-block bg-indigo-600 hover:bg-indigo-500 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors"
+          >
+            View Dashboard
+          </a>
         </div>
       </div>
     );
@@ -159,16 +166,14 @@ export default function CreateEscrowPage() {
         {/* Token */}
         <div>
           <label className="block text-sm font-medium text-zinc-300 mb-2">
-            TIP-20 Token Address
+            Token
           </label>
-          <input
-            type="text"
-            placeholder="0x... (TIP-20 stablecoin address)"
-            value={form.token}
-            onChange={(e) => setForm({ ...form, token: e.target.value })}
-            className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-indigo-500"
-            required
-          />
+          <div className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-3 flex items-center justify-between">
+            <span className="text-white font-medium">USDC</span>
+            <span className="text-xs text-zinc-500 font-mono">
+              {form.token.slice(0, 6)}...{form.token.slice(-4)}
+            </span>
+          </div>
         </div>
 
         {/* Amount */}
