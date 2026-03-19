@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useAccount } from "wagmi";
 import { parseUnits, encodeAbiParameters, pad } from "viem";
-import { useCreateEscrow, useApproveToken } from "@/hooks/useEscrow";
+import { useCreateEscrow, useApproveToken, ZERO_ADDRESS } from "@/hooks/useEscrow";
 
 const RELEASE_CONDITIONS = [
   { value: 0, label: "Agent Approval", description: "A single agent approves the release" },
@@ -17,6 +17,7 @@ export default function CreateEscrowPage() {
   const { create, isPending: isCreating, isConfirming, isSuccess, error } = useCreateEscrow();
   const { approveToken, isPending: isApproving, isSuccess: isApproved } = useApproveToken();
 
+  const [isBounty, setIsBounty] = useState(false);
   const [step, setStep] = useState<"form" | "approve" | "create">("form");
   const [form, setForm] = useState({
     recipient: "",
@@ -59,7 +60,7 @@ export default function CreateEscrowPage() {
       : ("0x" + "00".repeat(32)) as `0x${string}`;
 
     create({
-      recipient: form.recipient as `0x${string}`,
+      recipient: (isBounty ? ZERO_ADDRESS : form.recipient) as `0x${string}`,
       token: form.token as `0x${string}`,
       amount,
       deadline: deadlineTimestamp,
@@ -87,9 +88,13 @@ export default function CreateEscrowPage() {
     return (
       <div className="max-w-2xl mx-auto px-4 py-20 text-center">
         <div className="bg-green-900/30 border border-green-700 rounded-xl p-8">
-          <h2 className="text-2xl font-bold text-green-400 mb-2">Escrow Created!</h2>
+          <h2 className="text-2xl font-bold text-green-400 mb-2">
+            {isBounty ? "Bounty Created!" : "Escrow Created!"}
+          </h2>
           <p className="text-zinc-300">
-            Your escrow has been created successfully. View it on the dashboard.
+            {isBounty
+              ? "Your bounty is live. An agent will assign the recipient when it's completed."
+              : "Your escrow has been created successfully. View it on the dashboard."}
           </p>
         </div>
       </div>
@@ -101,20 +106,55 @@ export default function CreateEscrowPage() {
       <h1 className="text-3xl font-bold mb-8">Create Escrow</h1>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Recipient */}
-        <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-2">
-            Recipient Address
-          </label>
-          <input
-            type="text"
-            placeholder="0x..."
-            value={form.recipient}
-            onChange={(e) => setForm({ ...form, recipient: e.target.value })}
-            className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-indigo-500"
-            required
-          />
+        {/* Escrow Type Toggle */}
+        <div className="flex items-center gap-4 bg-zinc-900 border border-zinc-800 rounded-xl p-4">
+          <button
+            type="button"
+            onClick={() => setIsBounty(false)}
+            className={`flex-1 py-3 rounded-lg font-medium text-sm transition-colors ${
+              !isBounty
+                ? "bg-indigo-600 text-white"
+                : "text-zinc-400 hover:text-white"
+            }`}
+          >
+            Direct Escrow
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsBounty(true)}
+            className={`flex-1 py-3 rounded-lg font-medium text-sm transition-colors ${
+              isBounty
+                ? "bg-amber-600 text-white"
+                : "text-zinc-400 hover:text-white"
+            }`}
+          >
+            Open Bounty
+          </button>
         </div>
+
+        {isBounty && (
+          <div className="bg-amber-900/20 border border-amber-700/50 rounded-lg p-4 text-amber-200 text-sm">
+            <strong>Bounty Mode:</strong> No recipient is set upfront. An agent will assign the
+            recipient when someone completes the bounty.
+          </div>
+        )}
+
+        {/* Recipient (only for direct escrow) */}
+        {!isBounty && (
+          <div>
+            <label className="block text-sm font-medium text-zinc-300 mb-2">
+              Recipient Address
+            </label>
+            <input
+              type="text"
+              placeholder="0x..."
+              value={form.recipient}
+              onChange={(e) => setForm({ ...form, recipient: e.target.value })}
+              className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-indigo-500"
+              required
+            />
+          </div>
+        )}
 
         {/* Token */}
         <div>
