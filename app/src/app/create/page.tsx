@@ -1,0 +1,323 @@
+"use client";
+
+import { useState } from "react";
+import { useAccount } from "wagmi";
+import { parseUnits, encodeAbiParameters, pad } from "viem";
+import { useCreateEscrow, useApproveToken } from "@/hooks/useEscrow";
+
+const RELEASE_CONDITIONS = [
+  { value: 0, label: "Agent Approval", description: "A single agent approves the release" },
+  { value: 1, label: "Time Lock", description: "Auto-releases after a specified time" },
+  { value: 2, label: "Multi-Sig", description: "Multiple agents must approve" },
+  { value: 3, label: "Social Verified", description: "Agent verifies via Farcaster/X" },
+];
+
+export default function CreateEscrowPage() {
+  const { address, isConnected } = useAccount();
+  const { create, isPending: isCreating, isConfirming, isSuccess, error } = useCreateEscrow();
+  const { approveToken, isPending: isApproving, isSuccess: isApproved } = useApproveToken();
+
+  const [step, setStep] = useState<"form" | "approve" | "create">("form");
+  const [form, setForm] = useState({
+    recipient: "",
+    token: "",
+    amount: "",
+    deadline: "",
+    releaseTime: "",
+    condition: 0,
+    agents: "",
+    requiredApprovals: "1",
+    memo: "",
+    description: "",
+    socialHandle: "",
+    socialPlatform: "",
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setStep("approve");
+
+    const amount = parseUnits(form.amount, 6); // TIP-20 uses 6 decimals
+    approveToken(form.token as `0x${string}`, amount);
+  };
+
+  const handleCreate = () => {
+    setStep("create");
+
+    const amount = parseUnits(form.amount, 6);
+    const deadlineTimestamp = BigInt(Math.floor(new Date(form.deadline).getTime() / 1000));
+    const releaseTimestamp = form.releaseTime
+      ? BigInt(Math.floor(new Date(form.releaseTime).getTime() / 1000))
+      : BigInt(0);
+    const agents = form.agents
+      .split(",")
+      .map((a) => a.trim())
+      .filter((a) => a.length > 0) as `0x${string}`[];
+
+    const memoBytes = form.memo
+      ? pad(new TextEncoder().encode(form.memo).slice(0, 32) as unknown as `0x${string}`, { size: 32 })
+      : ("0x" + "00".repeat(32)) as `0x${string}`;
+
+    create({
+      recipient: form.recipient as `0x${string}`,
+      token: form.token as `0x${string}`,
+      amount,
+      deadline: deadlineTimestamp,
+      releaseTime: releaseTimestamp,
+      condition: form.condition,
+      agents,
+      requiredApprovals: BigInt(form.requiredApprovals),
+      memo: memoBytes,
+      description: form.description,
+      socialHandle: form.socialHandle,
+      socialPlatform: form.socialPlatform,
+    });
+  };
+
+  if (!isConnected) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-20 text-center">
+        <h1 className="text-3xl font-bold mb-4">Create Escrow</h1>
+        <p className="text-zinc-400">Please connect your wallet to create an escrow.</p>
+      </div>
+    );
+  }
+
+  if (isSuccess) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-20 text-center">
+        <div className="bg-green-900/30 border border-green-700 rounded-xl p-8">
+          <h2 className="text-2xl font-bold text-green-400 mb-2">Escrow Created!</h2>
+          <p className="text-zinc-300">
+            Your escrow has been created successfully. View it on the dashboard.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto px-4 py-12">
+      <h1 className="text-3xl font-bold mb-8">Create Escrow</h1>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Recipient */}
+        <div>
+          <label className="block text-sm font-medium text-zinc-300 mb-2">
+            Recipient Address
+          </label>
+          <input
+            type="text"
+            placeholder="0x..."
+            value={form.recipient}
+            onChange={(e) => setForm({ ...form, recipient: e.target.value })}
+            className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-indigo-500"
+            required
+          />
+        </div>
+
+        {/* Token */}
+        <div>
+          <label className="block text-sm font-medium text-zinc-300 mb-2">
+            TIP-20 Token Address
+          </label>
+          <input
+            type="text"
+            placeholder="0x... (TIP-20 stablecoin address)"
+            value={form.token}
+            onChange={(e) => setForm({ ...form, token: e.target.value })}
+            className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-indigo-500"
+            required
+          />
+        </div>
+
+        {/* Amount */}
+        <div>
+          <label className="block text-sm font-medium text-zinc-300 mb-2">
+            Amount (in token units)
+          </label>
+          <input
+            type="number"
+            step="0.000001"
+            placeholder="100.00"
+            value={form.amount}
+            onChange={(e) => setForm({ ...form, amount: e.target.value })}
+            className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-indigo-500"
+            required
+          />
+        </div>
+
+        {/* Release Condition */}
+        <div>
+          <label className="block text-sm font-medium text-zinc-300 mb-2">
+            Release Condition
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            {RELEASE_CONDITIONS.map((c) => (
+              <button
+                key={c.value}
+                type="button"
+                onClick={() => setForm({ ...form, condition: c.value })}
+                className={`p-4 rounded-lg border text-left transition-colors ${
+                  form.condition === c.value
+                    ? "border-indigo-500 bg-indigo-500/10"
+                    : "border-zinc-700 bg-zinc-900 hover:border-zinc-500"
+                }`}
+              >
+                <div className="font-medium text-sm">{c.label}</div>
+                <div className="text-xs text-zinc-400 mt-1">{c.description}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Agents */}
+        <div>
+          <label className="block text-sm font-medium text-zinc-300 mb-2">
+            Agent Address(es){" "}
+            <span className="text-zinc-500">(comma-separated for multi-sig)</span>
+          </label>
+          <input
+            type="text"
+            placeholder="0x..."
+            value={form.agents}
+            onChange={(e) => setForm({ ...form, agents: e.target.value })}
+            className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-indigo-500"
+            required={form.condition !== 1}
+          />
+        </div>
+
+        {/* Multi-sig approvals */}
+        {form.condition === 2 && (
+          <div>
+            <label className="block text-sm font-medium text-zinc-300 mb-2">
+              Required Approvals
+            </label>
+            <input
+              type="number"
+              min="1"
+              value={form.requiredApprovals}
+              onChange={(e) => setForm({ ...form, requiredApprovals: e.target.value })}
+              className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-indigo-500"
+            />
+          </div>
+        )}
+
+        {/* Deadline */}
+        <div>
+          <label className="block text-sm font-medium text-zinc-300 mb-2">
+            Escrow Deadline
+          </label>
+          <input
+            type="datetime-local"
+            value={form.deadline}
+            onChange={(e) => setForm({ ...form, deadline: e.target.value })}
+            className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-indigo-500"
+            required
+          />
+        </div>
+
+        {/* Release time for TimeLock */}
+        {form.condition === 1 && (
+          <div>
+            <label className="block text-sm font-medium text-zinc-300 mb-2">
+              Auto-Release Time
+            </label>
+            <input
+              type="datetime-local"
+              value={form.releaseTime}
+              onChange={(e) => setForm({ ...form, releaseTime: e.target.value })}
+              className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-indigo-500"
+              required
+            />
+          </div>
+        )}
+
+        {/* Description */}
+        <div>
+          <label className="block text-sm font-medium text-zinc-300 mb-2">
+            Description
+          </label>
+          <textarea
+            placeholder="What is this escrow for?"
+            value={form.description}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
+            rows={3}
+            className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-indigo-500"
+          />
+        </div>
+
+        {/* Memo */}
+        <div>
+          <label className="block text-sm font-medium text-zinc-300 mb-2">
+            Payment Memo <span className="text-zinc-500">(optional, max 32 bytes)</span>
+          </label>
+          <input
+            type="text"
+            placeholder="Invoice #12345"
+            value={form.memo}
+            onChange={(e) => setForm({ ...form, memo: e.target.value })}
+            className="w-full bg-zinc-900 border border-zinc-700 rounded-lg px-4 py-3 text-white placeholder-zinc-500 focus:outline-none focus:border-indigo-500"
+          />
+        </div>
+
+        {/* Social Layer (Optional) */}
+        {(form.condition === 3 || form.socialHandle) && (
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 space-y-4">
+            <h3 className="font-medium text-zinc-200">Social Verification (Optional)</h3>
+            <div>
+              <label className="block text-sm text-zinc-400 mb-1">Platform</label>
+              <select
+                value={form.socialPlatform}
+                onChange={(e) => setForm({ ...form, socialPlatform: e.target.value })}
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-indigo-500"
+              >
+                <option value="">None</option>
+                <option value="farcaster">Farcaster</option>
+                <option value="x">X (Twitter)</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm text-zinc-400 mb-1">Handle</label>
+              <input
+                type="text"
+                placeholder="@username"
+                value={form.socialHandle}
+                onChange={(e) => setForm({ ...form, socialHandle: e.target.value })}
+                className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-4 py-2 text-white placeholder-zinc-500 focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Submit */}
+        {step === "form" && (
+          <button
+            type="submit"
+            disabled={isApproving}
+            className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-700 text-white py-3 rounded-lg font-medium text-lg transition-colors"
+          >
+            {isApproving ? "Approving Token..." : "Approve & Create Escrow"}
+          </button>
+        )}
+
+        {step === "approve" && isApproved && (
+          <button
+            type="button"
+            onClick={handleCreate}
+            disabled={isCreating || isConfirming}
+            className="w-full bg-green-600 hover:bg-green-500 disabled:bg-zinc-700 text-white py-3 rounded-lg font-medium text-lg transition-colors"
+          >
+            {isCreating ? "Creating..." : isConfirming ? "Confirming..." : "Confirm & Create Escrow"}
+          </button>
+        )}
+
+        {error && (
+          <div className="bg-red-900/30 border border-red-700 rounded-lg p-4 text-red-300 text-sm">
+            {error.message}
+          </div>
+        )}
+      </form>
+    </div>
+  );
+}
