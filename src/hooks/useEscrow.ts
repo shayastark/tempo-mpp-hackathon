@@ -184,10 +184,12 @@ export function useRecipientEscrows(address: `0x${string}` | undefined) {
 // The Tempo RPC strips EIP-1559 fields for estimateGas, but the wallet
 // doesn't know this and sends them anyway — causing "something went wrong".
 //
-// Fix: simulate the call first using the app's transport (which goes through
-// viem's Tempo chain formatters and the /api/rpc proxy), then pass the
-// prepared request (which includes the correct gas estimate) to the wallet.
-// The wallet sees gas is already set and skips its own estimation.
+// Fix: simulate the call first using the app's transport (standard eth_call),
+// then add the feeToken to the prepared request before handing it to the
+// wallet via writeContract. The wallet sees gas is already set and skips its
+// own estimation. We do NOT pass feeToken to simulateContract because that
+// triggers viem's Tempo formatters to convert eth_call into Tempo Transaction
+// format (type 0x76 with calls[]), which the RPC rejects with 500.
 // ---------------------------------------------------------------------------
 
 export function useCreateEscrow() {
@@ -232,10 +234,9 @@ export function useCreateEscrow() {
           },
         ],
         chainId: tempoMainnet.id,
-        feeToken: FEE_TOKEN,
       });
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      writeContract(request as any);
+      writeContract({ ...request, feeToken: FEE_TOKEN } as any);
     } catch (e) {
       setSimError(e as Error);
     }
@@ -259,10 +260,9 @@ export function useApproveRelease() {
         functionName: "approveRelease",
         args: [escrowId],
         chainId: tempoMainnet.id,
-        feeToken: FEE_TOKEN,
       });
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      writeContract(request as any);
+      writeContract({ ...request, feeToken: FEE_TOKEN } as any);
     } catch (e) {
       setSimError(e as Error);
     }
@@ -286,10 +286,9 @@ export function useReleaseTimeLock() {
         functionName: "releaseTimeLock",
         args: [escrowId],
         chainId: tempoMainnet.id,
-        feeToken: FEE_TOKEN,
       });
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      writeContract(request as any);
+      writeContract({ ...request, feeToken: FEE_TOKEN } as any);
     } catch (e) {
       setSimError(e as Error);
     }
@@ -313,10 +312,9 @@ export function useReleaseSocialVerified() {
         functionName: "releaseSocialVerified",
         args: [escrowId, verified],
         chainId: tempoMainnet.id,
-        feeToken: FEE_TOKEN,
       });
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      writeContract(request as any);
+      writeContract({ ...request, feeToken: FEE_TOKEN } as any);
     } catch (e) {
       setSimError(e as Error);
     }
@@ -340,10 +338,9 @@ export function useRefundExpired() {
         functionName: "refundExpired",
         args: [escrowId],
         chainId: tempoMainnet.id,
-        feeToken: FEE_TOKEN,
       });
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      writeContract(request as any);
+      writeContract({ ...request, feeToken: FEE_TOKEN } as any);
     } catch (e) {
       setSimError(e as Error);
     }
@@ -367,10 +364,9 @@ export function useDispute() {
         functionName: "dispute",
         args: [escrowId],
         chainId: tempoMainnet.id,
-        feeToken: FEE_TOKEN,
       });
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      writeContract(request as any);
+      writeContract({ ...request, feeToken: FEE_TOKEN } as any);
     } catch (e) {
       setSimError(e as Error);
     }
@@ -394,10 +390,9 @@ export function useClaimBounty() {
         functionName: "claimBounty",
         args: [escrowId, claimant],
         chainId: tempoMainnet.id,
-        feeToken: FEE_TOKEN,
       });
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      writeContract(request as any);
+      writeContract({ ...request, feeToken: FEE_TOKEN } as any);
     } catch (e) {
       setSimError(e as Error);
     }
@@ -427,10 +422,9 @@ export function useApproveToken() {
         functionName: "approve",
         args: [ESCROW_CONTRACT_ADDRESS, amount],
         chainId: tempoMainnet.id,
-        feeToken: FEE_TOKEN,
       });
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      writeContract(request as any);
+      writeContract({ ...request, feeToken: FEE_TOKEN } as any);
     } catch (e) {
       setSimError(e as Error);
     }
