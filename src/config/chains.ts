@@ -1,44 +1,18 @@
-import { defineChain } from "viem";
+import { tempo, tempoModerato } from "viem/chains";
 
-export const tempoTestnet = defineChain({
-  id: 42431,
-  name: "Tempo Testnet",
-  nativeCurrency: {
-    name: "USD",
-    symbol: "USD",
-    decimals: 18,
-  },
-  rpcUrls: {
-    default: {
-      http: ["https://rpc.moderato.tempo.xyz"],
-    },
-  },
-  blockExplorers: {
-    default: {
-      name: "Tempo Explorer",
-      url: "https://explore.tempo.xyz",
-    },
-  },
-  testnet: true,
-});
-
-export const tempoMainnet = defineChain({
-  id: 4217,
-  name: "Tempo",
-  nativeCurrency: {
-    name: "USD",
-    symbol: "USD",
-    decimals: 18,
-  },
+// Re-export with feeToken set to USDC on Tempo mainnet
+export const tempoMainnet = {
+  ...tempo,
   rpcUrls: {
     default: {
       http: ["https://rpc.tempo.xyz"],
+      webSocket: ["wss://rpc.tempo.xyz"],
     },
   },
-  blockExplorers: {
-    default: {
-      name: "Tempo Explorer",
-      url: "https://explore.tempo.xyz",
-    },
-  },
-});
+  feeToken: "0x20c000000000000000000000b9537d11c60e8b50" as const,
+};
+
+export const tempoTestnet = {
+  ...tempoModerato,
+  feeToken: "0x20c0000000000000000000000000000000000000" as const,
+};
