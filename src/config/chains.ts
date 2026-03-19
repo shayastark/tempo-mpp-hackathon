@@ -4,8 +4,8 @@ export const tempoTestnet = defineChain({
   id: 1996, // Tempo testnet chain ID
   name: "Tempo Testnet",
   nativeCurrency: {
-    name: "pathUSD",
-    symbol: "pathUSD",
+    name: "USDC",
+    symbol: "USDC",
     decimals: 6,
   },
   rpcUrls: {
@@ -26,8 +26,8 @@ export const tempoMainnet = defineChain({
   id: 1998, // Tempo mainnet chain ID
   name: "Tempo",
   nativeCurrency: {
-    name: "pathUSD",
-    symbol: "pathUSD",
+    name: "USDC",
+    symbol: "USDC",
     decimals: 6,
   },
   rpcUrls: {

@@ -7,7 +7,7 @@ import { privateKeyToAccount } from "viem/accounts";
 const tempoMainnet = defineChain({
   id: 1998,
   name: "Tempo",
-  nativeCurrency: { name: "pathUSD", symbol: "pathUSD", decimals: 6 },
+  nativeCurrency: { name: "USDC", symbol: "USDC", decimals: 6 },
   rpcUrls: { default: { http: ["https://rpc.tempo.xyz"] } },
 });
 
