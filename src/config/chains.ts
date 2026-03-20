@@ -1,11 +1,10 @@
 import { tempo } from "viem/chains";
 import { DEFAULT_TOKEN } from "./contracts";
 
-export const tempoMainnet = {
-  ...tempo,
-  // Chain-level feeToken so Tempo's prepareTransactionRequest middleware
-  // auto-fills it on every transaction. Required because Tempo has no native
-  // gas token — all gas is paid in a TIP-20 token (USDC).
+// Use tempo.extend() (not object spread) so the chain's prepareTransactionRequest
+// middleware, formatters, and serializers are preserved correctly. The feeToken
+// tells Tempo which TIP-20 token to use for gas on every transaction.
+export const tempoMainnet = tempo.extend({
   feeToken: DEFAULT_TOKEN,
   rpcUrls: {
     default: {
@@ -13,4 +12,4 @@ export const tempoMainnet = {
       webSocket: ["wss://rpc.tempo.xyz"],
     },
   },
-};
+});
