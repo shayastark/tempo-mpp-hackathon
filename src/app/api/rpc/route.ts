@@ -44,8 +44,13 @@ export async function POST(req: NextRequest) {
     console.log(`[RPC ←] ${method} raw: ${data.slice(0, 200)}`);
   }
 
+  // Always return 200 to the client for JSON-RPC responses. The upstream may
+  // return 402 (Payment Required) or other non-200 statuses, but the JSON-RPC
+  // error (if any) is already encoded in the response body. Forwarding non-200
+  // status codes causes viem/wagmi to throw transport errors and crash pages
+  // for users who don't have the mppx fetch polyfill active (e.g. not signed in).
   return new NextResponse(data, {
-    status: upstream.status,
+    status: 200,
     headers: { "Content-Type": "application/json" },
   });
 }
