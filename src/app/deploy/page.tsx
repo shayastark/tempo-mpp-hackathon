@@ -15,8 +15,6 @@ import { Abis, Addresses } from "viem/tempo";
 import artifact from "../../../contracts/artifacts/TempoEscrow.json";
 import { tempoMainnet } from "@/config/chains";
 
-const USDC_FEE_TOKEN = "0x20c000000000000000000000b9537d11c60e8b50" as const;
-
 // Browser wallet (injected) sends standard EVM txs → fee defaults to pathUSD.
 // Passkey / EOA (secp256k1) connectors send native Tempo Transactions → respects feeToken.
 const INJECTED_CONNECTOR_IDS = ["injected", "metaMask", "coinbaseWallet"];
@@ -106,10 +104,6 @@ export default function DeployPage() {
       bytecode: artifact.bytecode as `0x${string}`,
       args: [collector],
       chainId: tempoMainnet.id,
-      // Explicitly set USDC as the fee token for Tempo Transactions.
-      // Only respected by Passkey / EOA (secp256k1) connectors.
-      // @ts-expect-error — Tempo-specific transaction field
-      feeToken: USDC_FEE_TOKEN,
     });
   };
 
