@@ -13,6 +13,13 @@ const UPSTREAM_AUTH =
 export async function POST(req: NextRequest) {
   const body = await req.text();
 
+  // Debug logging — shows every RPC method, key params, and response
+  let parsed: { method?: string; params?: unknown[] } | undefined;
+  try { parsed = JSON.parse(body); } catch {}
+  const method = parsed?.method ?? "unknown";
+  const shortParams = JSON.stringify(parsed?.params ?? []).slice(0, 300);
+  console.log(`[RPC →] ${method} ${shortParams}`);
+
   const upstream = await fetch(UPSTREAM_URL, {
     method: "POST",
     headers: {
@@ -23,6 +30,20 @@ export async function POST(req: NextRequest) {
   });
 
   const data = await upstream.text();
+
+  // Log errors or short responses
+  try {
+    const resp = JSON.parse(data);
+    if (resp.error) {
+      console.log(`[RPC ←] ${method} ERROR:`, JSON.stringify(resp.error).slice(0, 500));
+    } else {
+      const resultStr = JSON.stringify(resp.result ?? "").slice(0, 200);
+      console.log(`[RPC ←] ${method} OK: ${resultStr}`);
+    }
+  } catch {
+    console.log(`[RPC ←] ${method} raw: ${data.slice(0, 200)}`);
+  }
+
   return new NextResponse(data, {
     status: upstream.status,
     headers: { "Content-Type": "application/json" },
