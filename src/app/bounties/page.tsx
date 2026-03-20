@@ -30,11 +30,12 @@ type Tab = "open" | "closed";
 
 export default function BountiesPage() {
   const [tab, setTab] = useState<Tab>("open");
-  const { data: rawCount, isLoading: countLoading } = useEscrowCount();
+  const { data: rawCount, isLoading: countLoading, isError: countError } = useEscrowCount();
   const count = rawCount ? Number(rawCount) : 0;
-  const { data: allEscrows, isLoading: escrowsLoading } = useAllEscrowsData(count);
+  const { data: allEscrows, isLoading: escrowsLoading, isError: escrowsError } = useAllEscrowsData(count);
 
   const isLoading = countLoading || escrowsLoading;
+  const isError = countError || escrowsError;
 
   const openBounties = allEscrows
     .filter((e) => e.status === "Active")
@@ -88,7 +89,14 @@ export default function BountiesPage() {
       </div>
 
       {/* List */}
-      {isLoading ? (
+      {isError ? (
+        <div className="text-center py-20 text-zinc-500">
+          <p className="text-lg">Failed to load bounties.</p>
+          <p className="text-sm mt-2">
+            Connect a wallet or try refreshing the page.
+          </p>
+        </div>
+      ) : isLoading ? (
         <div className="space-y-4">
           {[...Array(3)].map((_, i) => (
             <div
