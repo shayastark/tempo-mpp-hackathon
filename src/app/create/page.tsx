@@ -39,6 +39,16 @@ export default function CreateEscrowPage() {
   // Capture success in local state so it survives wagmi re-renders / state resets
   const [succeeded, setSucceeded] = useState(false);
   useEffect(() => { if (isSuccess) setSucceeded(true); }, [isSuccess]);
+  // Auto-chain: when approve succeeds, immediately trigger createEscrow
+  const [autoCreatePending, setAutoCreatePending] = useState(false);
+  useEffect(() => {
+    if (isApproved && step === "approve" && !autoCreatePending) {
+      setAutoCreatePending(true);
+      // Small delay to let UI update, then auto-create
+      setTimeout(() => handleCreateFromForm(), 100);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isApproved, step]);
   const [form, setForm] = useState({
     recipient: "",
     token: DEFAULT_TOKEN,
@@ -62,7 +72,7 @@ export default function CreateEscrowPage() {
     approveToken(form.token as `0x${string}`, amount);
   };
 
-  const handleCreate = () => {
+  const handleCreateFromForm = () => {
     setStep("create");
 
     const amount = parseUnits(form.amount, 6);
@@ -406,7 +416,7 @@ export default function CreateEscrowPage() {
             disabled={isApproving || (needsFeeToken && !feeTokenSet)}
             className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-700 text-white py-3 rounded-lg font-medium text-lg transition-colors"
           >
-            {(needsFeeToken && !feeTokenSet) ? "Set fee token first" : isApproving ? "Approving Token..." : "Approve & Create Escrow"}
+            {(needsFeeToken && !feeTokenSet) ? "Set fee token first" : isApproving ? "Approving Token..." : "Create Escrow"}
           </button>
         )}
 
@@ -420,14 +430,24 @@ export default function CreateEscrowPage() {
           </button>
         )}
 
-        {step === "approve" && isApproved && (
+        {step === "approve" && isApproved && !isCreating && !isConfirming && (
           <button
             type="button"
-            onClick={handleCreate}
+            onClick={handleCreateFromForm}
             disabled={isCreating || isConfirming}
             className="w-full bg-green-600 hover:bg-green-500 disabled:bg-zinc-700 text-white py-3 rounded-lg font-medium text-lg transition-colors"
           >
-            {isCreating ? "Creating..." : isConfirming ? "Confirming..." : "Confirm & Create Escrow"}
+            Confirm & Create Escrow
+          </button>
+        )}
+
+        {(step === "create" || ((isCreating || isConfirming) && step === "approve")) && (
+          <button
+            type="button"
+            disabled
+            className="w-full bg-zinc-700 text-white py-3 rounded-lg font-medium text-lg"
+          >
+            {isCreating ? "Confirm in wallet..." : isConfirming ? "Waiting for confirmation..." : "Creating escrow..."}
           </button>
         )}
 
