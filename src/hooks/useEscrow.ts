@@ -164,14 +164,15 @@ export function useRecipientEscrows(address: `0x${string}` | undefined) {
 // ---------------------------------------------------------------------------
 // Write hooks
 //
-// Every write call includes an explicit `gas` limit. This is critical for
-// injected wallets (MetaMask, Coinbase Wallet): without it, the wallet's
-// eth_estimateGas starts from the block gas limit (~30M). Tempo pre-deducts
-// max_fee = gas_limit × gas_price from the user's USDC during simulation,
-// so starting at 30M gas causes "insufficient funds" even for trivial calls.
+// Do NOT set feeToken on the chain config or on individual write calls.
+// feeToken converts txs to Tempo type 0x76 which injected wallets cannot
+// handle (MetaMask/Coinbase can't estimate gas for type 0x76).
 //
-// Setting a reasonable gas cap (e.g. 100k for approve, 500k for createEscrow)
-// keeps the pre-deduction small and lets estimation succeed.
+// Without feeToken, txs stay as standard EVM. Tempo's RPC auto-selects
+// the fee token from tx.to when it's a TIP-20 contract (e.g. approve on
+// USDC → tx.to = USDC → fees paid in USDC). For non-TIP-20 targets
+// (like the escrow contract), the user must first register a default fee
+// token via FeeManager.setUserToken().
 // ---------------------------------------------------------------------------
 
 export function useCreateEscrow() {
@@ -210,7 +211,6 @@ export function useCreateEscrow() {
         params.socialHandle,
         params.socialPlatform,
       ],
-      gas: BigInt(500_000),
       chainId: tempoMainnet.id,
     });
   };
@@ -228,7 +228,6 @@ export function useApproveRelease() {
       abi: ESCROW_ABI,
       functionName: "approveRelease",
       args: [escrowId],
-      gas: BigInt(150_000),
       chainId: tempoMainnet.id,
     });
   };
@@ -246,7 +245,6 @@ export function useReleaseTimeLock() {
       abi: ESCROW_ABI,
       functionName: "releaseTimeLock",
       args: [escrowId],
-      gas: BigInt(150_000),
       chainId: tempoMainnet.id,
     });
   };
@@ -264,7 +262,6 @@ export function useReleaseSocialVerified() {
       abi: ESCROW_ABI,
       functionName: "releaseSocialVerified",
       args: [escrowId, verified],
-      gas: BigInt(150_000),
       chainId: tempoMainnet.id,
     });
   };
@@ -282,7 +279,6 @@ export function useRefundExpired() {
       abi: ESCROW_ABI,
       functionName: "refundExpired",
       args: [escrowId],
-      gas: BigInt(150_000),
       chainId: tempoMainnet.id,
     });
   };
@@ -300,7 +296,6 @@ export function useDispute() {
       abi: ESCROW_ABI,
       functionName: "dispute",
       args: [escrowId],
-      gas: BigInt(150_000),
       chainId: tempoMainnet.id,
     });
   };
@@ -318,7 +313,6 @@ export function useClaimBounty() {
       abi: ESCROW_ABI,
       functionName: "claimBounty",
       args: [escrowId, claimant],
-      gas: BigInt(200_000),
       chainId: tempoMainnet.id,
     });
   };
@@ -342,7 +336,6 @@ export function useApproveToken() {
       abi: TIP20_ABI,
       functionName: "approve",
       args: [ESCROW_CONTRACT_ADDRESS, amount],
-      gas: BigInt(100_000),
       chainId: tempoMainnet.id,
     });
   };
