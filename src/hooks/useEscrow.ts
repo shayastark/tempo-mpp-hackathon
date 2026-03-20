@@ -215,7 +215,6 @@ export function useCreateEscrow() {
         params.socialPlatform,
       ],
       feeToken: FEE_TOKEN,
-      gas: BigInt(500_000),
     } as any);
   };
 
@@ -348,11 +347,6 @@ export function useApproveToken() {
       functionName: "approve",
       args: [ESCROW_CONTRACT_ADDRESS, amount],
       feeToken: FEE_TOKEN,
-      // Cap gas to avoid Tempo's pre-tx fee deduction over-reserving USDC.
-      // TIP-20 approve costs ~50k gas; without this the estimator may return
-      // a much higher value, causing "insufficient funds" when the protocol
-      // tries to collect max_fee = gas_limit * gas_price upfront.
-      gas: BigInt(100_000),
     } as any);
   };
 
