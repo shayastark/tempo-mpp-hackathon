@@ -24,7 +24,7 @@ export default function CreateEscrowPage() {
     needsSetup: needsFeeToken,
     setFeeToken,
     isPending: isSettingFeeToken,
-    isConfirming: isConfirmingFeeToken,
+    isSuccess: feeTokenSet,
     error: feeTokenError,
   } = useFeeTokenGuard();
 
@@ -372,7 +372,7 @@ export default function CreateEscrowPage() {
         )}
 
         {/* Fee Token Setup (injected wallets only) */}
-        {needsFeeToken && step === "form" && (
+        {needsFeeToken && !feeTokenSet && step === "form" && (
           <div className="bg-amber-900/20 border border-amber-700/50 rounded-xl p-5 space-y-3">
             <h3 className="font-medium text-amber-200 text-sm">
               One-time setup: Set fee token
@@ -384,14 +384,12 @@ export default function CreateEscrowPage() {
             <button
               type="button"
               onClick={setFeeToken}
-              disabled={isSettingFeeToken || isConfirmingFeeToken}
+              disabled={isSettingFeeToken}
               className="w-full bg-amber-600 hover:bg-amber-500 disabled:bg-zinc-700 text-white py-2.5 rounded-lg text-sm font-medium transition-colors"
             >
               {isSettingFeeToken
                 ? "Confirm in wallet..."
-                : isConfirmingFeeToken
-                  ? "Confirming..."
-                  : "Set USDC as Fee Token"}
+                : "Set USDC as Fee Token"}
             </button>
             {feeTokenError && (
               <p className="text-xs text-red-400">
@@ -405,10 +403,10 @@ export default function CreateEscrowPage() {
         {step === "form" && (
           <button
             type="submit"
-            disabled={isApproving || needsFeeToken}
+            disabled={isApproving || (needsFeeToken && !feeTokenSet)}
             className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-700 text-white py-3 rounded-lg font-medium text-lg transition-colors"
           >
-            {needsFeeToken ? "Set fee token first" : isApproving ? "Approving Token..." : "Approve & Create Escrow"}
+            {(needsFeeToken && !feeTokenSet) ? "Set fee token first" : isApproving ? "Approving Token..." : "Approve & Create Escrow"}
           </button>
         )}
 
