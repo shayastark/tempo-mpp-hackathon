@@ -3,7 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import { useAccount } from "wagmi";
 import { formatUnits } from "viem";
-import { Suspense } from "react";
+import { Suspense, useState, useCallback } from "react";
 import {
   useEscrowData,
   useEscrowAgents,
@@ -48,6 +48,35 @@ function EscrowDetailContent() {
   const isAgent = agents?.some((a) => a.toLowerCase() === address?.toLowerCase());
   const isActive = escrow.status === "Active";
   const isExpired = deadline < new Date();
+  const isBountyEscrow = escrow.recipient === "0x0000000000000000000000000000000000000000";
+
+  const [shareOpen, setShareOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const shareUrl = typeof window !== "undefined" ? `${window.location.origin}/escrow?id=${idParam}` : "";
+  const shareText = isBountyEscrow
+    ? `${amount} USDC bounty: ${escrow.description || `Escrow #${idParam}`}`
+    : `Escrow #${idParam} — ${amount} USDC`;
+
+  const copyLink = useCallback(() => {
+    navigator.clipboard.writeText(shareUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [shareUrl]);
+
+  const shareToX = useCallback(() => {
+    window.open(
+      `https://x.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`,
+      "_blank"
+    );
+  }, [shareText, shareUrl]);
+
+  const shareToFarcaster = useCallback(() => {
+    window.open(
+      `https://farcaster.xyz/~/compose?text=${encodeURIComponent(shareText + "\n" + shareUrl)}`,
+      "_blank"
+    );
+  }, [shareText, shareUrl]);
 
   const STATUS_COLORS: Record<string, string> = {
     Active: "bg-blue-500/20 text-blue-400",
@@ -64,6 +93,51 @@ function EscrowDetailContent() {
         <span className={`text-sm px-3 py-1 rounded-full ${STATUS_COLORS[escrow.status]}`}>
           {escrow.status}
         </span>
+        <div className="relative ml-auto">
+          <button
+            onClick={() => setShareOpen(!shareOpen)}
+            className="flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-300 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+              <polyline points="16 6 12 2 8 6" />
+              <line x1="12" y1="2" x2="12" y2="15" />
+            </svg>
+            Share
+          </button>
+          {shareOpen && (
+            <div className="absolute right-0 top-full mt-2 w-56 bg-zinc-900 border border-zinc-700 rounded-xl shadow-xl z-50 overflow-hidden">
+              <button
+                onClick={copyLink}
+                className="w-full flex items-center gap-3 px-4 py-3 text-sm text-zinc-300 hover:bg-zinc-800 transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                </svg>
+                {copied ? "Copied!" : "Copy Link"}
+              </button>
+              <button
+                onClick={shareToX}
+                className="w-full flex items-center gap-3 px-4 py-3 text-sm text-zinc-300 hover:bg-zinc-800 transition-colors border-t border-zinc-800"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                </svg>
+                Share on X
+              </button>
+              <button
+                onClick={shareToFarcaster}
+                className="w-full flex items-center gap-3 px-4 py-3 text-sm text-zinc-300 hover:bg-zinc-800 transition-colors border-t border-zinc-800"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M5.322 2h13.356v2.667H22V8h-1.61v9.333c0 .737-.597 1.334-1.334 1.334h-1.39c-.737 0-1.333-.597-1.333-1.334V12c0-1.472-1.194-2.667-2.667-2.667h-3.332C8.861 9.333 7.667 10.528 7.667 12v5.333c0 .737-.597 1.334-1.334 1.334H4.944c-.737 0-1.333-.597-1.333-1.334V8H2V4.667h3.322V2z" />
+                </svg>
+                Share on Farcaster
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Main Info */}
