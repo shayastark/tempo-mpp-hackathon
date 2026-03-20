@@ -157,7 +157,7 @@ function ShareButton({ escrow, amount }: { escrow: EscrowData & { id: bigint }; 
     e.preventDefault();
     e.stopPropagation();
     window.open(
-      `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText + "\n" + shareUrl)}`,
+      `https://farcaster.xyz/~/compose?text=${encodeURIComponent(shareText + "\n" + shareUrl)}`,
       "_blank"
     );
   }, [shareText, shareUrl]);

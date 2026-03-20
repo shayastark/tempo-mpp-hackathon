@@ -73,7 +73,7 @@ function EscrowDetailContent() {
 
   const shareToFarcaster = useCallback(() => {
     window.open(
-      `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText + "\n" + shareUrl)}`,
+      `https://farcaster.xyz/~/compose?text=${encodeURIComponent(shareText + "\n" + shareUrl)}`,
       "_blank"
     );
   }, [shareText, shareUrl]);
