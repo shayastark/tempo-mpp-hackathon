@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useAccount } from "wagmi";
 import { parseUnits, pad } from "viem";
 import { useCreateEscrow, useApproveToken, useTokenBalance, ZERO_ADDRESS } from "@/hooks/useEscrow";
+import { useFeeTokenGuard } from "@/hooks/useFeeTokenGuard";
 import { DEFAULT_TOKEN } from "@/config/contracts";
 import { formatUnits } from "viem";
 
@@ -19,6 +20,14 @@ export default function CreateEscrowPage() {
   const { address, isConnected } = useAccount();
   const { create, isPending: isCreating, isConfirming, isSuccess, error } = useCreateEscrow();
   const { approveToken, isPending: isApproving, isConfirming: isApproveConfirming, isSuccess: isApproved, error: approveError } = useApproveToken();
+  const {
+    needsSetup: needsFeeToken,
+    setFeeToken,
+    isPending: isSettingFeeToken,
+    isConfirming: isConfirmingFeeToken,
+    error: feeTokenError,
+  } = useFeeTokenGuard();
+
   const { data: rawBalance } = useTokenBalance(
     DEFAULT_TOKEN as `0x${string}`,
     address as `0x${string}` | undefined,
@@ -362,14 +371,44 @@ export default function CreateEscrowPage() {
           </div>
         )}
 
+        {/* Fee Token Setup (injected wallets only) */}
+        {needsFeeToken && step === "form" && (
+          <div className="bg-amber-900/20 border border-amber-700/50 rounded-xl p-5 space-y-3">
+            <h3 className="font-medium text-amber-200 text-sm">
+              One-time setup: Set fee token
+            </h3>
+            <p className="text-xs text-zinc-400">
+              Browser wallets (Coinbase Wallet, MetaMask) require registering
+              USDC as your gas fee token before sending transactions on Tempo.
+            </p>
+            <button
+              type="button"
+              onClick={setFeeToken}
+              disabled={isSettingFeeToken || isConfirmingFeeToken}
+              className="w-full bg-amber-600 hover:bg-amber-500 disabled:bg-zinc-700 text-white py-2.5 rounded-lg text-sm font-medium transition-colors"
+            >
+              {isSettingFeeToken
+                ? "Confirm in wallet..."
+                : isConfirmingFeeToken
+                  ? "Confirming..."
+                  : "Set USDC as Fee Token"}
+            </button>
+            {feeTokenError && (
+              <p className="text-xs text-red-400">
+                {feeTokenError instanceof Error ? feeTokenError.message : String(feeTokenError)}
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Submit */}
         {step === "form" && (
           <button
             type="submit"
-            disabled={isApproving}
+            disabled={isApproving || needsFeeToken}
             className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:bg-zinc-700 text-white py-3 rounded-lg font-medium text-lg transition-colors"
           >
-            {isApproving ? "Approving Token..." : "Approve & Create Escrow"}
+            {needsFeeToken ? "Set fee token first" : isApproving ? "Approving Token..." : "Approve & Create Escrow"}
           </button>
         )}
 
