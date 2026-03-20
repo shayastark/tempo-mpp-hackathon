@@ -2,14 +2,8 @@
 
 import { useReadContract, useReadContracts, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import type { Abi } from "viem";
-import { ESCROW_ABI, ESCROW_CONTRACT_ADDRESS, TIP20_ABI, DEFAULT_TOKEN } from "@/config/contracts";
-
-// Tempo has no native gas token — every tx must declare which TIP-20 token pays
-// for gas via feeToken. For local accounts (webAuthn/secp256k1) this is auto-
-// filled by Tempo's prepareTransactionRequest middleware from the chain config.
-// For injected wallets (Coinbase Wallet, MetaMask) prepareTransactionRequest is
-// NOT called, so we must include feeToken explicitly on every write call.
-const FEE_TOKEN = DEFAULT_TOKEN as `0x${string}`;
+import { ESCROW_ABI, ESCROW_CONTRACT_ADDRESS, TIP20_ABI } from "@/config/contracts";
+import { tempoMainnet } from "@/config/chains";
 
 export type EscrowStatus = "Active" | "Released" | "Refunded" | "Disputed" | "Expired";
 export type ReleaseCondition = "AgentApproval" | "TimeLock" | "MultiSig" | "SocialVerified";
@@ -170,11 +164,19 @@ export function useRecipientEscrows(address: `0x${string}` | undefined) {
 // ---------------------------------------------------------------------------
 // Write hooks
 //
-// Tempo has no native gas token — gas is paid in TIP-20 USDC. For local
-// accounts the chain-level feeToken auto-fills via prepareTransactionRequest,
-// but injected wallets (json-rpc accounts) skip that middleware entirely.
-// We pass feeToken explicitly on every write call so both paths work.
-// The `as any` cast is needed because wagmi's types don't include feeToken.
+// Do NOT pass feeToken on write calls. Including feeToken causes viem to
+// format the tx as Tempo type 0x76 (with calls[]) which injected wallets
+// (Coinbase Wallet, MetaMask) cannot gas-estimate properly — the wallet's
+// own eth_estimateGas starts from the block gas limit, and Tempo's pre-tx
+// fee deduction (max_fee = gas_limit * gas_price) exceeds the user's USDC
+// balance, producing "insufficient funds".
+//
+// Without feeToken the tx stays as standard EVM format. Injected wallets
+// handle it normally, and Tempo's RPC auto-selects the fee token from
+// tx.to (when it's a TIP-20 contract) or the user's default fee token.
+//
+// For local accounts (webAuthn/secp256k1), Tempo's chain config middleware
+// in prepareTransactionRequest adds feeToken from chain.feeToken anyway.
 // ---------------------------------------------------------------------------
 
 export function useCreateEscrow() {
@@ -195,7 +197,6 @@ export function useCreateEscrow() {
     socialHandle: string;
     socialPlatform: string;
   }) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     writeContract({
       address: ESCROW_CONTRACT_ADDRESS,
       abi: ESCROW_ABI,
@@ -214,9 +215,8 @@ export function useCreateEscrow() {
         params.socialHandle,
         params.socialPlatform,
       ],
-      feeToken: FEE_TOKEN,
-      gas: BigInt(5_000_000),
-    } as any);
+      chainId: tempoMainnet.id,
+    });
   };
 
   return { create, hash, isPending, isConfirming, isSuccess, error };
@@ -227,14 +227,13 @@ export function useApproveRelease() {
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
   const approve = (escrowId: bigint) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     writeContract({
       address: ESCROW_CONTRACT_ADDRESS,
       abi: ESCROW_ABI,
       functionName: "approveRelease",
       args: [escrowId],
-      feeToken: FEE_TOKEN,
-    } as any);
+      chainId: tempoMainnet.id,
+    });
   };
 
   return { approve, hash, isPending, isConfirming, isSuccess, error };
@@ -245,14 +244,13 @@ export function useReleaseTimeLock() {
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
   const release = (escrowId: bigint) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     writeContract({
       address: ESCROW_CONTRACT_ADDRESS,
       abi: ESCROW_ABI,
       functionName: "releaseTimeLock",
       args: [escrowId],
-      feeToken: FEE_TOKEN,
-    } as any);
+      chainId: tempoMainnet.id,
+    });
   };
 
   return { release, hash, isPending, isConfirming, isSuccess, error };
@@ -263,14 +261,13 @@ export function useReleaseSocialVerified() {
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
   const release = (escrowId: bigint, verified: boolean) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     writeContract({
       address: ESCROW_CONTRACT_ADDRESS,
       abi: ESCROW_ABI,
       functionName: "releaseSocialVerified",
       args: [escrowId, verified],
-      feeToken: FEE_TOKEN,
-    } as any);
+      chainId: tempoMainnet.id,
+    });
   };
 
   return { release, hash, isPending, isConfirming, isSuccess, error };
@@ -281,14 +278,13 @@ export function useRefundExpired() {
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
   const refund = (escrowId: bigint) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     writeContract({
       address: ESCROW_CONTRACT_ADDRESS,
       abi: ESCROW_ABI,
       functionName: "refundExpired",
       args: [escrowId],
-      feeToken: FEE_TOKEN,
-    } as any);
+      chainId: tempoMainnet.id,
+    });
   };
 
   return { refund, hash, isPending, isConfirming, isSuccess, error };
@@ -299,14 +295,13 @@ export function useDispute() {
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
   const disputeEscrow = (escrowId: bigint) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     writeContract({
       address: ESCROW_CONTRACT_ADDRESS,
       abi: ESCROW_ABI,
       functionName: "dispute",
       args: [escrowId],
-      feeToken: FEE_TOKEN,
-    } as any);
+      chainId: tempoMainnet.id,
+    });
   };
 
   return { disputeEscrow, hash, isPending, isConfirming, isSuccess, error };
@@ -317,14 +312,13 @@ export function useClaimBounty() {
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
   const claim = (escrowId: bigint, claimant: `0x${string}`) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     writeContract({
       address: ESCROW_CONTRACT_ADDRESS,
       abi: ESCROW_ABI,
       functionName: "claimBounty",
       args: [escrowId, claimant],
-      feeToken: FEE_TOKEN,
-    } as any);
+      chainId: tempoMainnet.id,
+    });
   };
 
   return { claim, hash, isPending, isConfirming, isSuccess, error };
@@ -341,21 +335,13 @@ export function useApproveToken() {
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({ hash });
 
   const approveToken = (token: `0x${string}`, amount: bigint) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     writeContract({
       address: token,
       abi: TIP20_ABI,
       functionName: "approve",
       args: [ESCROW_CONTRACT_ADDRESS, amount],
-      feeToken: FEE_TOKEN,
-      // Explicit gas skips eth_estimateGas. Tempo's RPC simulates the full
-      // pre-tx fee deduction (max_fee = gas_limit * gas_price) during
-      // estimation, starting from the block gas limit. That initial probe
-      // can exceed the user's USDC balance and fail with "insufficient
-      // funds". 2M is generous for a TIP-20 approve while keeping the
-      // upfront fee reservation small (~0.13 USDC at typical gas prices).
-      gas: BigInt(2_000_000),
-    } as any);
+      chainId: tempoMainnet.id,
+    });
   };
 
   return { approveToken, hash, isPending, isConfirming, isSuccess, error };
