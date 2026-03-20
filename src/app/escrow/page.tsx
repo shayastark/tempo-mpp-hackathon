@@ -14,13 +14,21 @@ import {
   useDispute,
 } from "@/hooks/useEscrow";
 
+const STATUS_COLORS: Record<string, string> = {
+  Active: "bg-blue-500/20 text-blue-400",
+  Released: "bg-green-500/20 text-green-400",
+  Refunded: "bg-yellow-500/20 text-yellow-400",
+  Disputed: "bg-red-500/20 text-red-400",
+  Expired: "bg-zinc-500/20 text-zinc-400",
+};
+
 function EscrowDetailContent() {
   const searchParams = useSearchParams();
   const idParam = searchParams.get("id");
   const escrowId = idParam ? BigInt(idParam) : BigInt(0);
   const { address } = useAccount();
 
-  const { data: escrow, isLoading, isError, error } = useEscrowData(escrowId);
+  const { data: escrow, isLoading, isError } = useEscrowData(escrowId);
   const { data: rawAgents } = useEscrowAgents(escrowId);
   const agents = rawAgents as `0x${string}`[] | undefined;
   const { approve, isPending: isApproving } = useApproveRelease();
@@ -28,6 +36,39 @@ function EscrowDetailContent() {
   const { release: releaseSocial, isPending: isReleasingSocial } = useReleaseSocialVerified();
   const { refund, isPending: isRefunding } = useRefundExpired();
   const { disputeEscrow, isPending: isDisputing } = useDispute();
+
+  // All hooks must be called unconditionally (Rules of Hooks) — no early
+  // returns above this point.
+  const [shareOpen, setShareOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const amount = escrow ? formatUnits(escrow.amount, 6) : "0";
+  const isBountyEscrow = escrow?.recipient === "0x0000000000000000000000000000000000000000";
+
+  const shareUrl = typeof window !== "undefined" ? `${window.location.origin}/escrow?id=${idParam}` : "";
+  const shareText = isBountyEscrow
+    ? `${amount} USDC bounty: ${escrow?.description || `Escrow #${idParam}`}`
+    : `Escrow #${idParam} — ${amount} USDC`;
+
+  const copyLink = useCallback(() => {
+    navigator.clipboard.writeText(shareUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [shareUrl]);
+
+  const shareToX = useCallback(() => {
+    window.open(
+      `https://x.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`,
+      "_blank"
+    );
+  }, [shareText, shareUrl]);
+
+  const shareToFarcaster = useCallback(() => {
+    window.open(
+      `https://farcaster.xyz/~/compose?text=${encodeURIComponent(shareText + "\n" + shareUrl)}`,
+      "_blank"
+    );
+  }, [shareText, shareUrl]);
 
   if (isLoading) {
     return (
@@ -59,7 +100,6 @@ function EscrowDetailContent() {
     );
   }
 
-  const amount = formatUnits(escrow.amount, 6);
   const deadline = new Date(Number(escrow.deadline) * 1000);
   const releaseTime = Number(escrow.releaseTime) > 0 ? new Date(Number(escrow.releaseTime) * 1000) : null;
   const isDepositor = address?.toLowerCase() === escrow.depositor.toLowerCase();
@@ -67,43 +107,6 @@ function EscrowDetailContent() {
   const isAgent = agents?.some((a) => a.toLowerCase() === address?.toLowerCase());
   const isActive = escrow.status === "Active";
   const isExpired = deadline < new Date();
-  const isBountyEscrow = escrow.recipient === "0x0000000000000000000000000000000000000000";
-
-  const [shareOpen, setShareOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
-
-  const shareUrl = typeof window !== "undefined" ? `${window.location.origin}/escrow?id=${idParam}` : "";
-  const shareText = isBountyEscrow
-    ? `${amount} USDC bounty: ${escrow.description || `Escrow #${idParam}`}`
-    : `Escrow #${idParam} — ${amount} USDC`;
-
-  const copyLink = useCallback(() => {
-    navigator.clipboard.writeText(shareUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }, [shareUrl]);
-
-  const shareToX = useCallback(() => {
-    window.open(
-      `https://x.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`,
-      "_blank"
-    );
-  }, [shareText, shareUrl]);
-
-  const shareToFarcaster = useCallback(() => {
-    window.open(
-      `https://farcaster.xyz/~/compose?text=${encodeURIComponent(shareText + "\n" + shareUrl)}`,
-      "_blank"
-    );
-  }, [shareText, shareUrl]);
-
-  const STATUS_COLORS: Record<string, string> = {
-    Active: "bg-blue-500/20 text-blue-400",
-    Released: "bg-green-500/20 text-green-400",
-    Refunded: "bg-yellow-500/20 text-yellow-400",
-    Disputed: "bg-red-500/20 text-red-400",
-    Expired: "bg-zinc-500/20 text-zinc-400",
-  };
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-12">
