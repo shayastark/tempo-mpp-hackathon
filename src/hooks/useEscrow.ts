@@ -215,6 +215,7 @@ export function useCreateEscrow() {
         params.socialPlatform,
       ],
       feeToken: FEE_TOKEN,
+      gas: BigInt(5_000_000),
     } as any);
   };
 
@@ -347,6 +348,13 @@ export function useApproveToken() {
       functionName: "approve",
       args: [ESCROW_CONTRACT_ADDRESS, amount],
       feeToken: FEE_TOKEN,
+      // Explicit gas skips eth_estimateGas. Tempo's RPC simulates the full
+      // pre-tx fee deduction (max_fee = gas_limit * gas_price) during
+      // estimation, starting from the block gas limit. That initial probe
+      // can exceed the user's USDC balance and fail with "insufficient
+      // funds". 2M is generous for a TIP-20 approve while keeping the
+      // upfront fee reservation small (~0.13 USDC at typical gas prices).
+      gas: BigInt(2_000_000),
     } as any);
   };
 
