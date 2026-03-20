@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAccount } from "wagmi";
-import { parseUnits, pad } from "viem";
+import { parseUnits, pad, toHex } from "viem";
 import { useCreateEscrow, useApproveToken, useTokenBalance, ZERO_ADDRESS } from "@/hooks/useEscrow";
 import { useFeeTokenGuard } from "@/hooks/useFeeTokenGuard";
 import { DEFAULT_TOKEN } from "@/config/contracts";
@@ -86,7 +86,7 @@ export default function CreateEscrowPage() {
       .filter((a) => a.length > 0) as `0x${string}`[];
 
     const memoBytes = form.memo
-      ? pad(new TextEncoder().encode(form.memo).slice(0, 32) as unknown as `0x${string}`, { size: 32 })
+      ? pad(toHex(new TextEncoder().encode(form.memo).slice(0, 32)), { size: 32 })
       : ("0x" + "00".repeat(32)) as `0x${string}`;
 
     create({
